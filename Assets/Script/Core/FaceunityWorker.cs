@@ -994,10 +994,11 @@ public class FaceunityWorker : MonoBehaviour
 
                                 while (fuIsLibraryInit() == 0)
                                 {
+                                    Debug.Log("(SetupMode Normal)Waiting for LibraryInit...");
                                     yield return Util._endOfFrame;
                                 }
 
-                                Debug.Log("fu_Setup Finished!");
+                                Debug.Log("(SetupMode Normal)fu_Setup Finished!");
                             }
                             else if (SetupMode == SETUPMODE.Local)
                             {
@@ -1011,10 +1012,16 @@ public class FaceunityWorker : MonoBehaviour
 
                                 if (offlinebundledata_bytes == null || offlinebundledata_bytes.Length == 0)
                                 {
+                                    Debug.LogFormat("can not find offlinebundle_signed:{0}{1}", offlinebundle_path, offlinebundle_name);
                                     string offlinebundle_unsigned = Util.GetStreamingAssetsPath() + "/faceunity/" + OfflineBundleName;
                                     WWW offlinebundledata_unsigned = new WWW(offlinebundle_unsigned);
                                     yield return offlinebundledata_unsigned;
                                     offlinebundledata_bytes = offlinebundledata_unsigned.bytes;
+                                    if (offlinebundledata_bytes == null || offlinebundledata_bytes.Length == 0)
+                                    {
+                                        Debug.LogErrorFormat("can not find offlinebundle_unsigned:{0}", offlinebundle_unsigned);
+                                        yield break;
+                                    }
                                     loaclAuthMode = false;
                                 }
 
@@ -1027,6 +1034,7 @@ public class FaceunityWorker : MonoBehaviour
 
                                 while (fuIsLibraryInit() == 0)
                                 {
+                                    Debug.Log("(SetupMode Local)Waiting for LibraryInit...");
                                     yield return Util._endOfFrame;
                                 }
 
@@ -1055,6 +1063,7 @@ public class FaceunityWorker : MonoBehaviour
                                     //不能释放fptr和iptr，由Nama自行管理，否则会崩溃
                                     Util.SaveBytesFile(fpa, offlinebundle_path, offlinebundle_name);
                                 }
+                                Debug.Log("(SetupMode Local)fu_Setup Finished!");
                             }
 
                             if (m_licdata_handle.IsAllocated)
