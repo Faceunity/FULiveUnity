@@ -5,7 +5,8 @@ using System;
 using System.Runtime.InteropServices;
 using UnityEngine.Video;
 
-public class RenderSimple : MonoBehaviour {
+public class RenderSimple : MonoBehaviour
+{
 
     public enum InputSource
     {
@@ -20,9 +21,9 @@ public class RenderSimple : MonoBehaviour {
 
     //摄像头参数(INPUT)
     public string currentDeviceName;
-    public int cameraWidth=1280;
-    public int cameraHeight=720;
-    public int cameraFrameRate=30;
+    public int cameraWidth = 1280;
+    public int cameraHeight = 720;
+    public int cameraFrameRate = 30;
     bool currentDeviceisFrontFacing = false;
 
     WebCamTexture wtex; //Unity的外部相机类
@@ -50,14 +51,12 @@ public class RenderSimple : MonoBehaviour {
 
     const int SLOTLENGTH = 1;
     int[] itemid_tosdk;
-    GCHandle itemid_handle;
-    IntPtr p_itemsid;
 
     public void OnValidate()
     {
-        if(Application.isPlaying && currentInputSource!= inputSource)
+        if (Application.isPlaying && currentInputSource != inputSource)
         {
-            if(inputSource == InputSource.Camera)
+            if (inputSource == InputSource.Camera)
             {
                 StartCoroutine(InitCamera());
             }
@@ -130,23 +129,21 @@ public class RenderSimple : MonoBehaviour {
         if (itemid_tosdk == null)
         {
             itemid_tosdk = new int[SLOTLENGTH];
-            itemid_handle = GCHandle.Alloc(itemid_tosdk, GCHandleType.Pinned);
-            p_itemsid = itemid_handle.AddrOfPinnedObject();
         }
     }
 
     //初始化相机
     void InitApplication(object source, EventArgs e)
-    { 
+    {
         StartCoroutine(InitCamera());
-        StartCoroutine(LoadEmptyItem());
+        StartCoroutine(LoadDefaultItem());
     }
 
-    IEnumerator LoadEmptyItem()
+    IEnumerator LoadDefaultItem()
     {
         if (string.IsNullOrEmpty(LoadBundleName))
         {
-            yield return LoadItem(Util.GetStreamingAssetsPath() + "/faceunity/EmptyItem.bytes");
+            yield return LoadItem(Util.GetStreamingAssetsPath() + "/faceunity/graphics/aitype.bytes");
             SetItemParamd(0, "aitype", (double)FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR);
         }
         else
@@ -168,6 +165,7 @@ public class RenderSimple : MonoBehaviour {
     void Update()
     {
         FaceunityWorker.FixRotationWithAcceleration(Input.acceleration, !currentDeviceisFrontFacing);
+        //FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT90);
 
         if (currentInputSource == InputSource.Video && InputRenderTexture != null)
         {
@@ -180,12 +178,12 @@ public class RenderSimple : MonoBehaviour {
             UpdateData(IntPtr.Zero, (int)InputTex.GetNativeTexturePtr(), InputTex.width, InputTex.height, UpdateDataMode.ImageTexId);
             return;
         }
-		
+
         if (currentInputSource == InputSource.Camera && wtex != null && wtex.isPlaying)
         {
             if (wtex.didUpdateThisFrame)
             {
-                if(updateDataMode == UpdateDataMode.None)
+                if (updateDataMode == UpdateDataMode.None)
                 {
                     if (RawImg_BackGroud != null)
                     {
@@ -215,7 +213,7 @@ public class RenderSimple : MonoBehaviour {
                     }
                     else if (updateDataMode == UpdateDataMode.NV21 || updateDataMode == UpdateDataMode.Dual)
                     {
-                        int[] argb = new int[wtex.width * wtex.height];       //模拟NV21模式,仅测试用,仅安卓手机上能正常运行
+                        int[] argb = new int[wtex.width * wtex.height];       //模拟NV21模式,仅测试用
                         for (int i = 0; i < webtexdata.Length; i++)
                         {
                             argb[i] = 0;
@@ -263,12 +261,8 @@ public class RenderSimple : MonoBehaviour {
     }
 
 
-
-
-
-
-    /**\brief 往SDK输入数据并根据返回的纹理ID新建一个纹理，绑定在UI上，这个返回不是即时的，首次输入数据后真正执行是在GL.IssuePluginEvent执行的时候，因此纹理ID会在下一帧返回\param ptr 输入数据buffer的指针\param texid 输入数据的纹理ID\param w 该帧图片的宽\param h 该帧图片的高\param mode 四种数据输入格式，详见文档\return 无    */
-    public void UpdateData(IntPtr ptr,int texid,int w,int h, UpdateDataMode mode)
+    /**\brief 往SDK输入数据并根据返回的纹理ID新建一个纹理，绑定在UI上，        这个返回不是即时的，首次输入数据后真正执行是在GL.IssuePluginEvent执行的时候，因此纹理ID会在下一帧返回\param ptr 输入数据buffer的指针\param texid 输入数据的纹理ID\param w 该帧图片的宽\param h 该帧图片的高\param mode 四种数据输入格式，详见文档\return 无    */
+    public void UpdateData(IntPtr ptr, int texid, int w, int h, UpdateDataMode mode)
     {
         if (mode == UpdateDataMode.NV21)
             FaceunityWorker.SetNV21Input(ptr, 0, w, h);
@@ -283,7 +277,10 @@ public class RenderSimple : MonoBehaviour {
             m_fu_texid = FaceunityWorker.fu_GetNamaTextureId();
             if (m_fu_texid > 0)
             {
-                m_rendered_tex = Texture2D.CreateExternalTexture(w, h, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
+                if (FaceunityWorker.NeedSwitchWidthHeight())
+                    m_rendered_tex = Texture2D.CreateExternalTexture(h, w, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
+                else
+                    m_rendered_tex = Texture2D.CreateExternalTexture(w, h, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
                 Debug.LogFormat("Texture2D.CreateExternalTexture:{0}\n", m_fu_texid);
                 if (RawImg_BackGroud != null)
                 {
@@ -294,7 +291,7 @@ public class RenderSimple : MonoBehaviour {
                 m_tex_created = true;
             }
         }
-        
+
         //GetJoint3ds();
     }
 
@@ -342,31 +339,27 @@ public class RenderSimple : MonoBehaviour {
 
     public IEnumerator LoadItem(string path, int slotid = 0)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             yield break;
         Debug.Log("LoadItem:" + path);
         WWW bundledata = new WWW(path);
         yield return bundledata;
         byte[] bundle_bytes = bundledata.bytes;
-        GCHandle hObject = GCHandle.Alloc(bundle_bytes, GCHandleType.Pinned);
-        IntPtr pObject = hObject.AddrOfPinnedObject();
-
-        int itemid = FaceunityWorker.fuCreateItemFromPackage(pObject, bundle_bytes.Length);
-        hObject.Free();
+        int itemid = FaceunityWorker.fuCreateItemFromPackage(bundle_bytes, bundle_bytes.Length);
 
         if (itemid_tosdk[slotid] > 0)
             UnLoadItem(slotid);
 
         itemid_tosdk[slotid] = itemid;
 
-        FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
+        FaceunityWorker.fu_SetItemIds(itemid_tosdk, itemid_tosdk.Length, null);
 
         Debug.Log("LoadItem Finish");
     }
 
     public bool UnLoadItem(int slotid = 0)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             return false;
         if (slotid >= 0 && slotid < SLOTLENGTH)
         {
@@ -387,37 +380,37 @@ public class RenderSimple : MonoBehaviour {
         }
     }
 
-    float[] joint3ds;
-    int[] m_joint3dsLength = new int[1];
+    //float[] joint3ds;
+    //int[] m_joint3dsLength = new int[1];
 
-    private float[] GetJoint3ds()
-    {
-        // 获取当前人数
-        int index = FaceunityWorker.fuHumanProcessorGetNumResults();
-        if (index > 0)
-        {
-            Debug.LogFormat("检测到人体！index={0}", index);
-            IntPtr result = FaceunityWorker.fuHumanProcessorGetResultJoint3ds(0, m_joint3dsLength);
-            int length = m_joint3dsLength[0];
-            if (length > 0)
-            {
-                if (joint3ds == null || joint3ds.Length != length)
-                {
-                    joint3ds = new float[length];
-                }
-                Marshal.Copy(result, joint3ds, 0, length);
-                Debug.LogFormat("joint3ds.Length = {0}, joint3ds[0]={1}, joint3ds[1]={2}", joint3ds.Length, joint3ds[0], joint3ds[1]);
-                return joint3ds;
-            }
-            else
-            {
-                Debug.LogFormat("空的, length={0}", length);
-            }
-        }
-        else
-        {
-            Debug.Log("没身体");
-        }
-        return null;
-    }
+    //private float[] GetJoint3ds()
+    //{
+    //    // 获取当前人数
+    //    int index = FaceunityWorker.fuHumanProcessorGetNumResults();
+    //    if (index > 0)
+    //    {
+    //        Debug.LogFormat("检测到人体！index={0}", index);
+    //        IntPtr result = FaceunityWorker.fuHumanProcessorGetResultJoint3ds(0, m_joint3dsLength);
+    //        int length = m_joint3dsLength[0];
+    //        if (length > 0)
+    //        {
+    //            if (joint3ds == null || joint3ds.Length != length)
+    //            {
+    //                joint3ds = new float[length];
+    //            }
+    //            Marshal.Copy(result, joint3ds, 0, length);
+    //            Debug.LogFormat("joint3ds.Length = {0}, joint3ds[0]={1}, joint3ds[1]={2}", joint3ds.Length, joint3ds[0], joint3ds[1]);
+    //            return joint3ds;
+    //        }
+    //        else
+    //        {
+    //            Debug.LogFormat("空的, length={0}", length);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        Debug.Log("没身体");
+    //    }
+    //    return null;
+    //}
 }

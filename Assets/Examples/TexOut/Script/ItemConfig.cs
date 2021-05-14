@@ -48,15 +48,15 @@ public struct Item
 public class ItemConfig
 {
     public static Item[] beautySkin ={
-        new Item { name = "beautification", fullname = "face_beautification", iconid = -1 ,type=ItemType.Beauty},
+        new Item { name = "beautification", fullname = "graphics/face_beautification", iconid = -1 ,type=ItemType.Beauty},
     };
 
     public static Item[] commonFilter ={
-        new Item { name = "fuzzytoonfilter", fullname = "fuzzytoonfilter", iconid = -1 ,type=ItemType.CommonFilter},
+        new Item { name = "fuzzytoonfilter", fullname = "graphics/fuzzytoonfilter", iconid = -1 ,type=ItemType.CommonFilter},
     };
 
     public static Item[] makeup ={
-        new Item { name = "face_makeup", fullname = "face_makeup", iconid = -1 ,type=ItemType.Makeup},
+        new Item { name = "face_makeup", fullname = "graphics/face_makeup", iconid = -1 ,type=ItemType.Makeup},
     };
 
     //Animoji
@@ -221,8 +221,8 @@ public class BeautyConfig
         new Beauty { name = "精准美肤", paramword = "skin_detect", maxvalue=1, defaultvalue=1, disablevalue=0, iconid_0 = 0,iconid_1=1 ,type = BeautySkinType.BeautySkin},//0-1 int,d=0
         new Beauty { name = "精细磨皮", paramword = "blur_type", maxvalue=2, defaultvalue=2, disablevalue=0, iconid_0 = 2,iconid_1=3 ,type = BeautySkinType.BeautySkin},//0-2 int,d=0 清晰磨皮,d=1 重度磨皮,d=2 精细磨皮
         new Beauty { name = "磨皮", paramword = "blur_level", maxvalue=6, defaultvalue=4.2f, disablevalue=0, iconid_0 = 2,iconid_1=3 ,type = BeautySkinType.BeautySkin},//0-6f,
-        new Beauty { name = "美白", paramword = "color_level", maxvalue=2, defaultvalue=0.3f, disablevalue=0, iconid_0 = 4,iconid_1=5 ,type = BeautySkinType.BeautySkin},//0-2f
-        new Beauty { name = "红润", paramword = "red_level", maxvalue=2, defaultvalue=0.3f, disablevalue=0, iconid_0 = 6,iconid_1=7 ,type = BeautySkinType.BeautySkin},//0-2f
+        new Beauty { name = "美白", paramword = "color_level", maxvalue=1, defaultvalue=0.3f, disablevalue=0, iconid_0 = 4,iconid_1=5 ,type = BeautySkinType.BeautySkin},//0-2f
+        new Beauty { name = "红润", paramword = "red_level", maxvalue=1, defaultvalue=0.3f, disablevalue=0, iconid_0 = 6,iconid_1=7 ,type = BeautySkinType.BeautySkin},//0-2f
         new Beauty { name = "亮眼", paramword = "eye_bright", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 8,iconid_1=9 ,type = BeautySkinType.BeautySkin},//0-1f
         new Beauty { name = "美牙", paramword = "tooth_whiten", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 10,iconid_1=11 ,type = BeautySkinType.BeautySkin},//0-1f
         new Beauty { name = "去黑眼圈", paramword = "remove_pouch_strength", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 12,iconid_1=13 ,type = BeautySkinType.BeautySkin},//0-1f
@@ -230,7 +230,7 @@ public class BeautyConfig
     };
 
     public static Beauty[] beautySkin_2 = {
-        new Beauty { name = "脸型", paramword = "face_shape", maxvalue=4, defaultvalue=4, disablevalue=-1, iconid_0 = 0,iconid_1=1 ,type = BeautySkinType.BeautyShape},//0-4 int ,d=3
+        new Beauty { name = "脸型", paramword = "face_shape", maxvalue=4, defaultvalue=4, disablevalue=-1, iconid_0 = 0,iconid_1=1 ,type = BeautySkinType.BeautyShape},//0-4 int ,d=4
         new Beauty { name = "瘦脸", paramword = "cheek_thinning", maxvalue=1, defaultvalue=0.5f, disablevalue=0, iconid_0 = 2,iconid_1=3 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "V脸", paramword = "cheek_v", maxvalue=1, defaultvalue=0.5f, disablevalue=0, iconid_0 = 4,iconid_1=5 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "窄脸", paramword = "cheek_narrow", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 6,iconid_1=7 ,type = BeautySkinType.BeautyShape},//0-1f

@@ -141,14 +141,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 890beb884a9110b4b939fd060bd1548b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_plugin_inited: 0
-  MAXFACE: 1
-  EnableExpressionLoop: 0
   LICENSE: 
+  MAXHEAD: 1
+  EnableHeadLoop: 1
   OfflineBundleName: 
   SetupMode: 0
-  EnableGetNamaSystemError: 0
-  m_need_update_facenum: 0
+  EnableGetNamaError: 0
+  EnableNamaLogToConsole: 0
+  EnableNamaLogToFile: 0
+  loglevel: 6
+  m_need_update_headnum: 0
   face_true_id: 
 --- !u!4 &51551130
 Transform:

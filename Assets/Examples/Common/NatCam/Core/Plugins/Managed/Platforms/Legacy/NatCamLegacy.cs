@@ -144,14 +144,6 @@ namespace NatCamU.Core.Platforms {
             photo.Apply();
             if (callback != null) callback(photo, 0);
         }
-        public void SetFlipx(bool ifenable)
-        {
-            Util.LogError("Flipx is not supported on legacy");
-        }
-        public void SetFlipy(bool ifenable)
-        {
-            Util.LogError("Flipy is not supported on legacy");
-        }
 
         public static int GetCameraDeviceCount()
         {

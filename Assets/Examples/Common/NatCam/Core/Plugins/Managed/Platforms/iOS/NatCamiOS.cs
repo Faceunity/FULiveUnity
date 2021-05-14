@@ -143,15 +143,6 @@ namespace NatCamU.Core.Platforms {
             NatCamNative.CapturePhoto();
         }
 
-        public void SetFlipx(bool ifenable)
-        {
-            NatCamNative.SetFlipx(ifenable);
-        }
-        public void SetFlipy(bool ifenable)
-        {
-            NatCamNative.SetFlipy(ifenable);
-        }
-
         public static int GetCameraDeviceCount()
         {
             return NatCamNative.GetCameraDeviceCount();

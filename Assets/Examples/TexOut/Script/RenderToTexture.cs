@@ -26,8 +26,6 @@ public class RenderToTexture : MonoBehaviour
      * 可以在此主动声明第N个位置用于某一类道具，如第0位只用于美颜，第1位只用于美妆，第2位只用于滤镜等等。这些位置被称为slot。
      * */
     int[] itemid_tosdk;
-    GCHandle itemid_handle; //itemid_tosdk的GCHandle
-    IntPtr p_itemsid;   //itemid_tosdk的指针
 
     public const int SLOTLENGTH = 10;      //最大slot长度
     private struct slot_item
@@ -64,7 +62,9 @@ public class RenderToTexture : MonoBehaviour
 
     //渲染显示UI
     public RawImage RawImg_BackGroud;   //用来显示相机结果的UI控件
-    private Quaternion baseRotation;    //RawImg_BackGroud的初始旋转
+
+    [HideInInspector]
+    public bool isCameraChanging = false;
 
 
     public Shader bgShader; //可以用来控制纹理的旋转和镜像
@@ -117,7 +117,7 @@ public class RenderToTexture : MonoBehaviour
         return tex_new;
     }
 
-    //初始化相机后，执行这个回调，用于调整相机UI的旋转镜像缩放
+    //初始化相机后，执行这个回调，用于调整相机旋转镜像缩放
     public void OnStart()
     {
 #if !(UNITY_EDITOR || UNITY_STANDALONE)
@@ -125,6 +125,11 @@ public class RenderToTexture : MonoBehaviour
         if (RawImg_BackGroud != null)
         {
             RawImg_BackGroud.texture = NatCam.Preview;
+            if (FaceunityWorker.NeedSwitchWidthHeight())
+            {
+                var tex = ((Texture2D)RawImg_BackGroud.texture);
+                tex.Resize(tex.height, tex.width);
+            }
             RawImg_BackGroud.gameObject.SetActive(true);
         }
         else Debug.Log("Preview RawImage has not been set");
@@ -132,23 +137,23 @@ public class RenderToTexture : MonoBehaviour
 #else
         m_tex_created = false;
 #endif
-        SelfAdjusSize();
+        SelfAdjusUISize();
         //SetItemMirror();
+
+        FaceunityWorker.SetCameraChange(true);
     }
 
     //切换相机，newCamera为相机ID
     public void SwitchCamera(int newCamera = -1)
     {
-        FaceunityWorker.fuOnCameraChange();
-
         // Select the new camera ID // If no argument is given, switch to the next camera
         newCamera = newCamera < 0 ? (NatCam.Camera + 1) % DeviceCamera.Cameras.Count : newCamera;
         // Set the new active camera
-        NatCam.Camera = (DeviceCamera)newCamera;
+        NatCam.Camera = newCamera;
+
+        SelfAdjusTexOutPut();
 
         StartCoroutine(delaySetItemMirror());
-
-
     }
 
     //延迟设置道具的镜像参数，因为相机切换不是瞬间完成的
@@ -161,49 +166,38 @@ public class RenderToTexture : MonoBehaviour
         }
     }
 
-    //根据运行环境调整相机UI的旋转镜像缩放，这段简单的代码无法覆盖所有情况
-    public void SelfAdjusSize()
+    //根据运行环境调整Nama输出纹理的旋转镜像
+    public void SelfAdjusTexOutPut()
     {
-        Vector2 targetResolution = RawImg_BackGroud.canvas.GetComponent<CanvasScaler>().referenceResolution;
-        Vector2 currentResolution = NatCam.Camera.PreviewResolution;
-
-#if !UNITY_IOS || UNITY_EDITOR || UNITY_STANDALONE
-        if (DispatchUtility.Orientation == Orientation.Rotation_0 || DispatchUtility.Orientation == Orientation.Rotation_180)
-            RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y);
-        else
-            RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y, targetResolution.y * currentResolution.y / currentResolution.x);
-
+#if UNITY_EDITOR || UNITY_STANDALONE
+        FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT180);
+#elif UNITY_ANDROID
         if (NatCam.Camera.Facing == Facing.Front)
         {
-#if UNITY_ANDROID
-            NatCam.SetFlipx(false);
-            NatCam.SetFlipy(false);
-#endif
-            RawImg_BackGroud.rectTransform.rotation = baseRotation * Quaternion.AngleAxis((int)DispatchUtility.Orientation * 90, Vector3.forward);
-#if UNITY_EDITOR || UNITY_STANDALONE
-            RawImg_BackGroud.uvRect = new Rect(1, 0, -1, 1);    //镜像处理
-#else
-		    RawImg_BackGroud.uvRect = new Rect(0, 0, 1, 1);
-#endif
+            FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT90_FLIPHORIZONTAL);
         }
         else
         {
-#if UNITY_ANDROID
-            NatCam.SetFlipx(true);
-            NatCam.SetFlipy(false);
-#endif
-            RawImg_BackGroud.rectTransform.rotation = baseRotation * Quaternion.AngleAxis((int)DispatchUtility.Orientation * 90, Vector3.back);
-#if UNITY_EDITOR || UNITY_STANDALONE
-            RawImg_BackGroud.uvRect = new Rect(0, 0, 1, 1);
-#else
-		    RawImg_BackGroud.uvRect = new Rect(0, 1, 1, -1);    //镜像处理
-#endif
+            FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT270);
         }
-#else
-        NatCam.SetFlipx(false);
-        NatCam.SetFlipy(false);
-        RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.y / currentResolution.x, targetResolution.y);
+#elif UNITY_IOS
+        FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT180_FLIPHORIZONTAL);
 #endif
+    }
+
+    //根据运行环境调整相机UI的旋转镜像缩放
+    public void SelfAdjusUISize()
+    {
+        Vector2 targetResolution = RawImg_BackGroud.canvas.GetComponent<CanvasScaler>().referenceResolution;
+        Vector2 resolution = NatCam.Camera.PreviewResolution;
+#if UNITY_IOS && !UNITY_EDITOR
+        //ios相机的宽高是反的，为啥？？？
+        resolution = new Vector2(resolution.y, resolution.x);
+#else
+        if (FaceunityWorker.NeedSwitchWidthHeight())
+            resolution = new Vector2(resolution.y, resolution.x);
+#endif
+        RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * resolution.x / resolution.y, targetResolution.y);
     }
 
     // 初始化相机
@@ -237,6 +231,8 @@ public class RenderToTexture : MonoBehaviour
             NatCam.Play();
             // Register callback for when the preview starts //Note that this is a MUST when assigning the preview texture to anything
             NatCam.OnStart += OnStart;
+
+            SelfAdjusTexOutPut();
 
 #if UNITY_EDITOR || UNITY_STANDALONE
             if (img_handle.IsAllocated)
@@ -301,8 +297,6 @@ public class RenderToTexture : MonoBehaviour
         {
             //默认slot槽长度为SLOTLENGTH=10
             itemid_tosdk = new int[SLOTLENGTH];
-            itemid_handle = GCHandle.Alloc(itemid_tosdk, GCHandleType.Pinned);
-            p_itemsid = itemid_handle.AddrOfPinnedObject();
 
             slot_items = new slot_item[SLOTLENGTH];
             for (int i = 0; i < SLOTLENGTH; i++)
@@ -315,8 +309,7 @@ public class RenderToTexture : MonoBehaviour
     //SDK初始化完成后会执行这个回调，记录相机UI原始旋转信息，开启相机初始化协程
     void InitApplication(object source, EventArgs e)
     {
-        FaceunityWorker.SetRunningMode(FaceunityWorker.FURuningMode.FU_Mode_RenderItems);
-        baseRotation = RawImg_BackGroud.rectTransform.rotation;
+        FaceunityWorker.SetRunningMode(FaceunityWorker.FU_RUNNING_MODE.FU_RUNNING_MODE_RENDERITEMS);
         StartCoroutine("InitCamera");
     }
 
@@ -353,8 +346,8 @@ public class RenderToTexture : MonoBehaviour
                 //    img_bytes[4 * i + 2] = webtexdata[i].r;
                 //    img_bytes[4 * i + 3] = 1;
                 //}
-                FaceunityWorker.SetImage(p_img_ptr, (int)FaceunityWorker.FU_ADM_FLAG.FU_ADM_FLAG_FLIP_X, false, (int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y);   //传输数据方法之一
-                //FaceunityWorker.SetImageTexId((int)tex.GetNativeTexturePtr(), (int)FaceunityWorker.FU_ADM_FLAG.FU_ADM_FLAG_FLIP_X, (int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y);
+                FaceunityWorker.SetImage(p_img_ptr, 0, false, (int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y);   //传输数据方法之一
+                //FaceunityWorker.SetImageTexId((int)tex.GetNativeTexturePtr(), 0, (int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y);
             }
         }
 
@@ -365,7 +358,10 @@ public class RenderToTexture : MonoBehaviour
             if (m_fu_texid > 0)
             {
                 m_tex_created = true;
-                m_rendered_tex = Texture2D.CreateExternalTexture((int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
+                if (FaceunityWorker.NeedSwitchWidthHeight())
+                    m_rendered_tex = Texture2D.CreateExternalTexture((int)NatCam.Camera.PreviewResolution.y, (int)NatCam.Camera.PreviewResolution.x, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
+                else
+                    m_rendered_tex = Texture2D.CreateExternalTexture((int)NatCam.Camera.PreviewResolution.x, (int)NatCam.Camera.PreviewResolution.y, TextureFormat.RGBA32, false, true, (IntPtr)m_fu_texid);
                 Debug.LogFormat("Texture2D.CreateExternalTexture:{0}\n", m_fu_texid);
                 if (RawImg_BackGroud != null)
                 {
@@ -391,8 +387,6 @@ public class RenderToTexture : MonoBehaviour
 #if UNITY_EDITOR || UNITY_STANDALONE
             m_tex_created = false;
 #endif
-            //FaceunityWorker.fu_OnDeviceLost();
-
         }
         else
         {
@@ -405,74 +399,7 @@ public class RenderToTexture : MonoBehaviour
     /**\brief 封装过的加载道具用的接口，配合slot的概念和item这个struct控制多个不同类型的道具的加载卸载\param item 要加载的道具的item，封装过的道具信息集合，方便业务逻辑，详见itemconfig\param slotid  道具要加载的位置（slot），默认值为0，即slot数组的第0位\param cb  加载道具完毕后会自动执行的回调，可以为空\return 无*/
     public IEnumerator LoadItem(Item item, int slotid = 0, LoadItemCallback cb = null)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
-            yield break;
-        if (LoadingItem == false && item.fullname != null && item.fullname.Length != 0 && slotid >= 0 && slotid < SLOTLENGTH)
-        {
-            LoadingItem = true;
-            int tempslot = GetSlotIDbyName(item.name);
-            if (tempslot < 0)   //如果尚未载入道具数据
-            {
-                var bundledata = Resources.LoadAsync<TextAsset>(item.fullname);
-                yield return bundledata;
-                var data = bundledata.asset as TextAsset;
-                byte[] bundle_bytes = data != null ? data.bytes : null;
-                Debug.LogFormat("bundledata name:{0}, size:{1}", item.name, bundle_bytes.Length);
-                GCHandle hObject = GCHandle.Alloc(bundle_bytes, GCHandleType.Pinned);
-                IntPtr pObject = hObject.AddrOfPinnedObject();
-
-                var itemid = 0;
-                //多线程载入，可以防止主线程被卡住，但是会引起一些UI逻辑相关的问题，暂时关闭
-                //yield return Loom.RunAsync_Coroutine(() =>
-                //{
-                itemid = FaceunityWorker.fuCreateItemFromPackage(pObject, bundle_bytes.Length);
-                var errorcode = FaceunityWorker.fuGetSystemError();
-                if (errorcode != 0)
-                    Debug.LogErrorFormat("errorcode:{0}, {1}", errorcode, Marshal.PtrToStringAnsi(FaceunityWorker.fuGetSystemErrorString(errorcode)));
-                //});
-
-                hObject.Free();
-
-                UnLoadItem(slotid); //卸载上一个在这个slot槽内的道具
-
-                itemid_tosdk[slotid] = itemid;
-                slot_items[slotid].id = itemid;
-                slot_items[slotid].name = item.name;
-                slot_items[slotid].item = item;
-
-                FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
-                Debug.Log("载入Item：" + item.name + " @slotid=" + slotid);
-            }
-            else if (tempslot != slotid)    //道具已载入，但是不在请求的slot槽内
-            {
-                UnLoadItem(slotid);
-
-                itemid_tosdk[slotid] = slot_items[tempslot].id;
-                slot_items[slotid] = slot_items[tempslot];
-
-                itemid_tosdk[tempslot] = 0;
-                slot_items[tempslot].Reset();
-
-                FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
-                Debug.Log("移动Item：" + item.name + " from tempslot=" + tempslot + " to slotid=" + slotid);
-            }
-            else    //tempslot == slotid 即重复载入同一个道具进同一个slot槽，直接跳过
-            {
-                Debug.Log("重复载入Item：" + item.name + "  slotid=" + slotid);
-            }
-
-            SetItemMirror(slotid);
-
-            if (cb != null)
-                cb(item);//触发载入道具完成事件
-
-            LoadingItem = false;
-        }
-    }
-
-    public IEnumerator LoadItem2(Item item, int slotid = 0, LoadItemCallback cb = null)
-    {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             yield break;
         if (LoadingItem == false && item.fullname != null && item.fullname.Length != 0 && slotid >= 0 && slotid < SLOTLENGTH)
         {
@@ -485,20 +412,17 @@ public class RenderToTexture : MonoBehaviour
                 yield return bundledata;
                 byte[] bundle_bytes = bundledata.bytes;
                 Debug.LogFormat("bundledata name:{0}, size:{1}", item.name, bundle_bytes.Length);
-                GCHandle hObject = GCHandle.Alloc(bundle_bytes, GCHandleType.Pinned);
-                IntPtr pObject = hObject.AddrOfPinnedObject();
 
                 var itemid = 0;
                 //多线程载入，可以防止主线程被卡住，但是会引起一些UI逻辑相关的问题，暂时关闭
                 //yield return Loom.RunAsync_Coroutine(() =>
                 //{
-                itemid = FaceunityWorker.fuCreateItemFromPackage(pObject, bundle_bytes.Length);
+                itemid = FaceunityWorker.fuCreateItemFromPackage(bundle_bytes, bundle_bytes.Length);
                 var errorcode = FaceunityWorker.fuGetSystemError();
                 if (errorcode != 0)
                     Debug.LogErrorFormat("errorcode:{0}, {1}", errorcode, Marshal.PtrToStringAnsi(FaceunityWorker.fuGetSystemErrorString(errorcode)));
                 //});
-
-                hObject.Free();
+                
 
                 UnLoadItem(slotid); //卸载上一个在这个slot槽内的道具
 
@@ -507,7 +431,7 @@ public class RenderToTexture : MonoBehaviour
                 slot_items[slotid].name = item.name;
                 slot_items[slotid].item = item;
 
-                FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
+                FaceunityWorker.fu_SetItemIds(itemid_tosdk, itemid_tosdk.Length, null);
                 Debug.Log("载入Item：" + item.name + " @slotid=" + slotid);
             }
             else if (tempslot != slotid)    //道具已载入，但是不在请求的slot槽内
@@ -520,7 +444,7 @@ public class RenderToTexture : MonoBehaviour
                 itemid_tosdk[tempslot] = 0;
                 slot_items[tempslot].Reset();
 
-                FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
+                FaceunityWorker.fu_SetItemIds(itemid_tosdk, itemid_tosdk.Length, null);
                 Debug.Log("移动Item：" + item.name + " from tempslot=" + tempslot + " to slotid=" + slotid);
             }
             else    //tempslot == slotid 即重复载入同一个道具进同一个slot槽，直接跳过
@@ -578,7 +502,7 @@ public class RenderToTexture : MonoBehaviour
     //输入slotid卸载在该位置的道具
     public bool UnLoadItem(int slotid)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             return false;
         if (slotid >= 0 && slotid < SLOTLENGTH && slot_items[slotid].id > 0)
         {
@@ -595,7 +519,7 @@ public class RenderToTexture : MonoBehaviour
     //卸载所有道具
     public void UnLoadAllItems()
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             return;
         Debug.Log("UnLoadAllItems");
         GL.IssuePluginEvent(FaceunityWorker.fu_GetRenderEventFunc(), (int)FaceunityWorker.Nama_GL_Event_ID.FuDestroyAllItems);
@@ -642,11 +566,8 @@ public class RenderToTexture : MonoBehaviour
         if (slotid_dst >= 0 && slotid_dst < SLOTLENGTH && slotid_src >= 0 && slotid_src < SLOTLENGTH)
         {
             int[] value = { slot_items[slotid_src].id };
-            GCHandle vgc = GCHandle.Alloc(value, GCHandleType.Pinned);
-            IntPtr vptr = vgc.AddrOfPinnedObject();
-            FaceunityWorker.fuBindItems(slot_items[slotid_dst].id, vptr, 1);
+            FaceunityWorker.fuBindItems(slot_items[slotid_dst].id, value, value.Length);
             Debug.LogFormat("BindItem: slotid_dst={0}, slotid_src={1}", slotid_dst, slotid_src);
-            vgc.Free();
         }
     }
 
@@ -655,11 +576,8 @@ public class RenderToTexture : MonoBehaviour
         if (slotid_dst >= 0 && slotid_dst < SLOTLENGTH && slotid_src >= 0 && slotid_src < SLOTLENGTH)
         {
             int[] value = { slot_items[slotid_src].id };
-            GCHandle vgc = GCHandle.Alloc(value, GCHandleType.Pinned);
-            IntPtr vptr = vgc.AddrOfPinnedObject();
-            FaceunityWorker.fuUnbindItems(slot_items[slotid_dst].id, vptr, 1);
+            FaceunityWorker.fuUnbindItems(slot_items[slotid_dst].id, value, value.Length);
             Debug.LogFormat("UnBindItem: slotid_dst={0}, slotid_src={1}", slotid_dst, slotid_src);
-            vgc.Free();
         }
     }
 
@@ -683,10 +601,7 @@ public class RenderToTexture : MonoBehaviour
     {
         if (slotid >= 0 && slotid < SLOTLENGTH && value != null && value.Length > 0)
         {
-            GCHandle vgc = GCHandle.Alloc(value, GCHandleType.Pinned);
-            IntPtr vptr = vgc.AddrOfPinnedObject();
-            FaceunityWorker.fuItemSetParamdv(slot_items[slotid].id, paramdname, vptr, value.Length);
-            vgc.Free();
+            FaceunityWorker.fuItemSetParamdv(slot_items[slotid].id, paramdname, value, value.Length);
         }
     }
 
@@ -749,8 +664,8 @@ public class RenderToTexture : MonoBehaviour
     {
         if (slotid >= 0 && slotid < SLOTLENGTH)
         {
-            byte[] bytes = new byte[32];
-            int i = FaceunityWorker.fuItemGetParams(slot_items[slotid].id, paramdname, bytes, 32);
+            byte[] bytes = new byte[1024];
+            int i = FaceunityWorker.fuItemGetParams(slot_items[slotid].id, paramdname, bytes, bytes.Length);
             return System.Text.Encoding.Default.GetString(bytes).Replace("\0", "");
         }
         return "";
@@ -767,108 +682,51 @@ public class RenderToTexture : MonoBehaviour
         if (itemid <= 0)
             return;
         var item = slot_items[slotid].item;
-        FaceunityWorker.fuItemSetParamd(itemid, "camera_change", 1.0);
-        bool ifMirrored = NatCam.Camera.Facing == Facing.Front;
 
-#if (UNITY_ANDROID) && (!UNITY_EDITOR)
-        //道具旋转
-        ifMirrored = !ifMirrored;
-        FaceunityWorker.fuItemSetParamd(itemid, "isAndroid", 1.0);
-        if (item.name.CompareTo(ItemConfig.item_5[3].name) == 0)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "rotationAngle", (int)DispatchUtility.Orientation * 90);
-        }       
-        else if(item.type == ItemType.GestureRecognition)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "isRuningInUnity", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "rotationMode", 1);
+        bool isFront = NatCam.Camera.Facing == Facing.Front;
 
-            FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipX", ifMirrored ? 0 : 1);
-            FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipY", ifMirrored ? 0 : 1);
-        }
-        else if (item.type == ItemType.Makeup)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", ifMirrored ? 1 : 0);
-        }
-#endif
-#if (UNITY_IOS) && (!UNITY_EDITOR)
-        ifMirrored = false;
-        if (item.name.CompareTo(ItemConfig.item_8[0].name)==0 || item.name.CompareTo(ItemConfig.item_8[1].name) == 0 || item.name.CompareTo(ItemConfig.item_8[2].name) == 0)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "rotMode", 2);
-        }        
-        else if(item.type == ItemType.GestureRecognition)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "isRuningInUnity", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "rotationMode", 1);
-
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipX", ifMirrored ? 0 : 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipY", ifMirrored ? 0 : 1);
-        }
-        else if (item.type == ItemType.Makeup)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", ifMirrored ? 1 : 0);
-        }
-#endif
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-        if (item.name.CompareTo(ItemConfig.item_8[0].name) == 0 || item.name.CompareTo(ItemConfig.item_8[1].name) == 0 || item.name.CompareTo(ItemConfig.item_8[2].name) == 0)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "rotMode", 2);
-            FaceunityWorker.fuItemSetParamd(itemid, "particleDirMode", 3);
-        }
-        else if(item.type == ItemType.GestureRecognition)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "isRuningInUnity", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "rotationMode", 1);
-
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipX", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipY", 1);
-        }
-        else if (item.type == ItemType.Makeup)
+        if (item.type == ItemType.Makeup)
         {
             FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", 1);
         }
-#endif
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        if (item.name.CompareTo(ItemConfig.item_8[0].name) == 0 || item.name.CompareTo(ItemConfig.item_8[1].name) == 0 || item.name.CompareTo(ItemConfig.item_8[2].name) == 0)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "rotMode", 2);
-            FaceunityWorker.fuItemSetParamd(itemid, "particleDirMode", 3);
-        }        
-        else if(item.type == ItemType.GestureRecognition)
-        {
-            FaceunityWorker.fuItemSetParamd(itemid, "isRuningInUnity", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "rotationMode", 1);
-
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipX", 1);
-            //FaceunityWorker.fuItemSetParamd(itemid, "isNeedFlipY", 1);
-        }
-        else if (item.type == ItemType.Makeup)
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+        if (item.type == ItemType.Makeup)
         {
             FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", 1);
         }
+#elif UNITY_ANDROID
+        if (item.type == ItemType.Makeup)
+        {
+            FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", isFront ? 0 : 1);
+        }
+#elif UNITY_IOS
+        isFront = true;
+        if (item.type == ItemType.Makeup)
+        {
+            FaceunityWorker.fuItemSetParamd(itemid, "is_flip_points", 0);
+        }
 #endif
 
-        int param = ifMirrored ? 1 : 0;
-
-        //is3DFlipH 参数是用于对3D道具的顶点镜像
-        FaceunityWorker.fuItemSetParamd(itemid, "is3DFlipH", param);
-        //isFlipExpr 参数是用于对道具内部的表情系数的镜像
-        FaceunityWorker.fuItemSetParamd(itemid, "isFlipExpr", param);
-        //isFlipTrack 参数是用于对道具的人脸跟踪位置旋转的镜像
-        FaceunityWorker.fuItemSetParamd(itemid, "isFlipTrack", param);
-        //isFlipLight 参数是用于对道具内部的灯光的镜像
-        FaceunityWorker.fuItemSetParamd(itemid, "isFlipLight", param);
+        if (item.type == ItemType.Animoji)
+        {
+            //以下参数只对老的animoji道具起效！
+            int needflip = isFront ? 1 : 0;
+            //is3DFlipH 参数是用于对3D道具的顶点镜像
+            FaceunityWorker.fuItemSetParamd(itemid, "is3DFlipH", needflip);
+            //isFlipExpr 参数是用于对道具内部的表情系数的镜像
+            FaceunityWorker.fuItemSetParamd(itemid, "isFlipExpr", isFront ? 0 : 1);
+            //isFlipTrack 参数是用于对道具的人脸跟踪位置旋转的镜像
+            FaceunityWorker.fuItemSetParamd(itemid, "isFlipTrack", needflip);
+            //isFlipLight 参数是用于对道具内部的灯光的镜像
+            FaceunityWorker.fuItemSetParamd(itemid, "isFlipLight", needflip);
+        }
     }
 
     private void OnApplicationQuit()
     {
         UnLoadAllItems();
         //这些数据必须常驻，直到应用结束才能释放
-        if (itemid_handle != null && itemid_handle.IsAllocated)
-        {
-            itemid_handle.Free();
-        }
 #if UNITY_EDITOR || UNITY_STANDALONE
         if (img_handle != null && img_handle.IsAllocated)
         {

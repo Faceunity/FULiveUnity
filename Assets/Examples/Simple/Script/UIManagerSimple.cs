@@ -9,6 +9,7 @@ public class UIManagerSimple : MonoBehaviour {
 
     public Button Btn_Switch;//切换相机按钮
     public GameObject Image_FaceDetect; //Active时表示没有检测到人脸
+    
 
 
     //Awake时注册SDK初始化完成事件
@@ -36,7 +37,7 @@ public class UIManagerSimple : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
 
-        if (FaceunityWorker.instance.m_need_update_facenum > 0)
+        if (FaceunityWorker.instance.m_need_update_headnum > 0)
             Image_FaceDetect.SetActive(false);
         else
             Image_FaceDetect.SetActive(true);

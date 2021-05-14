@@ -1,11 +1,22 @@
 # Unity Nama C# API 参考文档
 级别：Public
-更新日期：2020-12-29
-SDK版本: 7.3.0
+更新日期：2021-04-16
+SDK版本: 7.4.0
 
 ------
 
 ## 最新更新内容：
+
+2021-04-16 v7.4.0:
+
+1. 优化2D人体点位和美体性能。  
+2. 优化人像分割效果和性能。优化手臂和手识别不稳定问题，优化背景误识别问题。修复人像分割偏移问题。  
+3. 优化美妆效果。优化美瞳贴合效果和溢色问题；优化唇妆遮挡效果，遮挡时口红不再显现。  
+4. 优化Animoji面部驱动效果。优化小幅度动作，如小幅度张嘴和眨眼时，驱动效果更加灵敏。  
+5. 优化情绪识别，支持8种基本情绪识。  
+6. 新增接口fuSetUseAsyncAIInference，支持异步模式，开启异步模式，帧率提升，可改善客户在一些低端设备上帧率不足问题。  
+7. 新增fuRender接口，为所有业务统一渲染接口，详见接口定义。  
+8. 新增接口 fuSetInputCameraBufferMatrix，fuSetInputCameraBufferMatrixState，fuSetInputCameraTextureMatrix，fuSetInputCameraTextureMatrixState，fuSetOutputMatrix，fuSetOutputMatrixState，用于设置图像转换矩阵，用于调整输出图像方向，详见接口定义。  
 
 2020-12-29 v7.3.0:
 
@@ -303,12 +314,12 @@ __备注:__
 加载舌头跟踪需要的数据文件
 
 ```c#
-public static extern int fuLoadTongueModel(IntPtr databuf, int databuf_sz);
+public static extern int fuLoadTongueModel(byte[] databuf, int databuf_sz);
 ```
 
 __参数:__
 
-*databuf*:  tongue.bytes中读取的二进制数据的指针
+*databuf*:  tongue.bytes中读取的二进制数据的数组
 *databuf_sz*:  tongue.bytes的长度
 
 __返回值:__
@@ -319,15 +330,13 @@ __备注:__
 
 这个接口会**立即**生效。
 
+这个接口即将被废弃，fuLoadAIModelFromPackage加载ai_face_processor.bytes时已经带有新版舌头跟踪数据，使用新版接口时不需要使用本接口
+
 ------
 ##### fuSetTrackFaceAIType  函数
 设置fuTrackFace算法运行类型接口
 ```C
-/**
- \brief Set AI type for fuTrackFace and fuTrackFaceWithTongue interface
- \param ai_type, is a bit combination of FUAITYPE;
- */
-FUNAMA_API void fuSetTrackFaceAIType(FUAITYPE ai_type);
+public static extern void fuSetTrackFaceAIType(FUAITYPE ai_type);
 ```
 __参数:__  
 
@@ -335,29 +344,35 @@ __参数:__
 
 ```c#
 public enum FUAITYPE
-    {
-	FUAITYPE_BACKGROUNDSEGMENTATION=1<<1,//背景分割,7.0.0及以上版本可使用FUAITYPE_HUMAN_PROCESSOR_SEGMENTATION
-	FUAITYPE_HAIRSEGMENTATION=1<<2,		//头发分割，7.0.0及以上版本可使用FUAITYPE_FACEPROCESSOR_HAIRSEGMENTATION
-	FUAITYPE_HANDGESTURE=1<<3,			//手势识别
-	FUAITYPE_TONGUETRACKING=1<<4,		//暂未使用
-	FUAITYPE_FACELANDMARKS75=1<<5,		//废弃
-	FUAITYPE_FACELANDMARKS209=1<<6,		//废弃
-	FUAITYPE_FACELANDMARKS239=1<<7,		//高级人脸特征点，7.0.0之后实际为241点
-	FUAITYPE_HUMANPOSE2D=1<<8,			//2D身体点位，7.0.0可使用FUAITYPE_HUMAN_PROCESSOR_2D_DANCE
-	FUAITYPE_BACKGROUNDSEGMENTATION_GREEN=1<<9,//绿幕分割
-	FUAITYPE_FACEPROCESSOR=1<<10，				//人脸算法模块，默认带低质量高性能表情跟踪
-	FUAITYPE_FACEPROCESSOR_FACECAPTURE = 1 << 11,	//高质量表情跟踪
-  	FUAITYPE_FACEPROCESSOR_FACECAPTURE_TONGUETRACKING = 1 << 12,	//高质量表情跟踪模式下额外进行舌头追踪
-  	FUAITYPE_FACEPROCESSOR_HAIRSEGMENTATION = 1 << 13,	//人脸算法模式下进行头发分割
-  	FUAITYPE_FACEPROCESSOR_HEADSEGMENTATION = 1 << 14,	//人脸算法模式下进行头部分割
-  	FUAITYPE_HUMAN_PROCESSOR = 1 << 15,			//人体算法模块
-  	FUAITYPE_HUMAN_PROCESSOR_DETECT = 1 << 16,	//人体算法模式下进行每帧都进行全图人体检测，性能相对较差
-  	FUAITYPE_HUMAN_PROCESSOR_2D_SELFIE = 1 << 17,//人体算法模式下进行2D半身点位
-  	FUAITYPE_HUMAN_PROCESSOR_2D_DANCE = 1 << 18,//人体算法模式下进行2D全身点位
-  	FUAITYPE_HUMAN_PROCESSOR_3D_SELFIE = 1 << 19,//人体算法模式下进行3D半身点位
-  	FUAITYPE_HUMAN_PROCESSOR_3D_DANCE = 1 << 20,//人体算法模式下进行3D全身点位
-  	FUAITYPE_HUMAN_PROCESSOR_SEGMENTATION = 1 << 21 //人体算法模式下进行人体分割
-    }
+{
+    FUAITYPE_NONE = 0,
+    FUAITYPE_BACKGROUNDSEGMENTATION = 1 << 1,
+    FUAITYPE_HAIRSEGMENTATION = 1 << 2,
+    FUAITYPE_HANDGESTURE = 1 << 3,
+    FUAITYPE_TONGUETRACKING = 1 << 4,
+    FUAITYPE_FACELANDMARKS75 = 1 << 5,
+    FUAITYPE_FACELANDMARKS209 = 1 << 6,
+    FUAITYPE_FACELANDMARKS239 = 1 << 7,
+    FUAITYPE_HUMANPOSE2D = 1 << 8,
+    FUAITYPE_BACKGROUNDSEGMENTATION_GREEN = 1 << 9,
+    FUAITYPE_FACEPROCESSOR = 1 << 10,
+    FUAITYPE_FACEPROCESSOR_FACECAPTURE = 1 << 11,
+    FUAITYPE_FACEPROCESSOR_FACECAPTURE_TONGUETRACKING = 1 << 12,
+    FUAITYPE_FACEPROCESSOR_HAIRSEGMENTATION = 1 << 13,
+    FUAITYPE_FACEPROCESSOR_HEADSEGMENTATION = 1 << 14,
+    FUAITYPE_FACEPROCESSOR_EXPRESSION_RECOGNIZER = 1 << 15,
+    FUAITYPE_FACEPROCESSOR_EMOTION_RECOGNIZER = 1 << 16,
+    FUAITYPE_FACEPROCESSOR_DISNEYGAN = 1 << 17,
+    FUAITYPE_HUMAN_PROCESSOR = 1 << 18,
+    FUAITYPE_HUMAN_PROCESSOR_DETECT = 1 << 19,
+    FUAITYPE_HUMAN_PROCESSOR_2D_SELFIE = 1 << 20,
+    FUAITYPE_HUMAN_PROCESSOR_2D_DANCE = 1 << 21,
+    FUAITYPE_HUMAN_PROCESSOR_2D_SLIM = 1 << 22,
+    FUAITYPE_HUMAN_PROCESSOR_3D_SELFIE = 1 << 23,
+    FUAITYPE_HUMAN_PROCESSOR_3D_DANCE = 1 << 24,
+    FUAITYPE_HUMAN_PROCESSOR_SEGMENTATION = 1 << 25,
+    FUAITYPE_FACE_RECOGNIZER = 1 << 26
+}
 ```
 
 __备注:__ 
@@ -370,13 +385,13 @@ __备注:__
 加载AI运算需要的数据文件
 
 ```c#
-public static extern int fuLoadAIModelFromPackage(IntPtr databuf, int databuf_sz, FUAITYPE ai_type);
+public static extern int fuLoadAIModelFromPackage(byte[] databuf, int databuf_sz, FUAITYPE ai_type);
 ```
 
 __参数:__
 
-*databuf*:  tongue.bytes中读取的二进制数据的指针
-*databuf_sz*:  tongue.bytes的长度
+*databuf*:  AI数据文件中读取的二进制数据的数组
+*databuf_sz*:  数组的长度
 *ai_type*:  AI数据文件类型，详见上文
 
 __返回值:__
@@ -388,16 +403,13 @@ __备注:__
 这个接口会**立即**生效。
 
 AI能力会随SDK一起发布，存放在Assets\StreamingAssets\faceunity目录中。
-- ai_bgseg.bytes 为背景分割AI能力模型，对应FUAITYPE_BACKGROUNDSEGMENTATION。7.0.0之后版本，可以统一使用ai_human_processor.bytes 对应的全身mask模块。
-- ai_hairseg.bytes 为头发分割AI能力模型，对应FUAITYPE_HAIRSEGMENTATION。7.0.0之后版本，可以统一使用ai_face_processor.bytes 对应的头发mask模块。
-- ai_hand_processor.bundle ( ai_gesture.bundle 7.2.0 后废弃） 为手势识别AI能力模型，对应FUAITYPE_HANDGESTURE。 
-- ai_facelandmarks75.bytes 为脸部特征点75点AI能力模型。	//废弃
-- ai_facelandmarks209.bytes 为脸部特征点209点AI能力模型。	//废弃
-- ai_facelandmarks239.bytes  为脸部特征点239点AI能力模型。	//废弃
-- ai_humanpose.bytes  为人体2D点位AI能力模型，对应FUAITYPE_HUMANPOSE2D。7.0.0之后版本，可以统一使用ai_human_processor.bytes 对应的人体点位模块。
-- ai_bgseg_green.bytes  为绿幕背景分割AI能力模型，对应FUAITYPE_BACKGROUNDSEGMENTATION_GREEN。
-- ai_face_processor.bytes 为人脸特征点、表情跟踪以及头发mask、头部maskAI能力模型，需要默认加载，对应FUAITYPE_FACEPROCESSOR。__注意:__ 桌面版(windows pc, mac)请使用ai_face_processor_pc.bytes , ai_face_processor.bytes 和 ai_face_processor_pc.bytes 功能相同，针对pc进行性能优化版本。。
-- ai_human_processor.bytes 为人体算法能力模型，包括人体检测、2D人体关键点（全身、半身）、人体3D骨骼（全身、半身）、人像mask、动作识别等能力，对应FUAITYPE_HUMAN_PROCESSOR。__注意:__ 桌面版(windows pc, mac)请使用ai_human_processor_pc.bytes , ai_human_processor_pc.bytes  和 ai_human_processor.bytes 功能相同，针对pc进行性能优化版本。
+
+__注意:__ 桌面版(windows, mac)请使用xxx_pc.bytes , 这是针对pc进行性能优化版本。
+
+
+- ai_face_processor.bytes 为人脸特征点、表情跟踪以及头发mask、头部maskAI能力模型，需要默认加载，对应FUAITYPE_FACEPROCESSOR。
+- ai_hand_processor.bytes  为手势识别AI能力模型，对应FUAITYPE_HANDGESTURE。。
+- ai_human_processor.bytes 为人体算法能力模型，包括人体检测、2D人体关键点（全身、半身）、人体3D骨骼（全身、半身）、人像mask、动作识别等能力，对应FUAITYPE_HUMAN_PROCESSOR。
 
 ------
 
@@ -482,26 +494,10 @@ __备注:__
 __参数:__
 
 *imgbuf*: RGBA格式的buffer数组指针
-*flags*: 数据输入的标志位
+*flags*: 请输入0
 *isbgra*: 0表示RGBA格式，1表示BGRA格式
 *w*: 图像宽
 *h*: 图像高
-
-```
-flags: 
-public enum FU_ADM_FLAG
-    {
-        FU_ADM_FLAG_NONE = 0,
-        FU_ADM_FLAG_EXTERNAL_OES_TEXTURE = 1,
-        FU_ADM_FLAG_ENABLE_READBACK = 2,
-        FU_ADM_FLAG_NV21_TEXTURE = 4,
-        FU_ADM_FLAG_I420_TEXTURE = 8,
-        FU_ADM_FLAG_I420_BUFFER = 16,
-        FU_ADM_FLAG_FLIP_X = 32,    //翻转只翻转道具渲染，并不会翻转整个图像
-        FU_ADM_FLAG_FLIP_Y = 64,
-        FU_ADM_FLAG_RGBA_BUFFER = 128
-    };
-```
 
 __返回值:__
 
@@ -525,7 +521,7 @@ __参数:__
 
 *nv21buf*: NV21格式的buffer数组指针
 *texid*: RGBA格式的纹理ID
-*flags*: 数据输入的标志位，参数同SetImage
+*flags*: 请输入0
 *w*: 图像宽
 *h*: 图像高
 
@@ -550,7 +546,7 @@ __备注:__
 __参数:__
 
 *nv21buf*: NV21格式的buffer数组指针
-*flags*: 数据输入的标志位，参数同SetImage
+*flags*: 请输入0
 *w*: 图像宽
 *h*: 图像高
 
@@ -575,7 +571,7 @@ __备注:__
 __参数:__
 
 *texid*: RGBA格式的纹理ID
-*flags*: 数据输入的标志位，参数同SetImage
+*flags*: 请输入0
 *w*: 图像宽
 *h*: 图像高
 
@@ -594,16 +590,15 @@ __备注:__
 设置UnityNamaSDK的运行模式
 
 ```c#
-public static extern void fu_SetRuningMode(FURuningMode runningMode);
+public static extern void fu_SetRuningMode(FU_RUNNING_MODE runningMode);
 
-public enum FURuningMode
-    {
-        FU_Mode_None = 0,
-        FU_Mode_RenderItems, 
-        FU_Mode_Beautification,
-        FU_Mode_Masked,
-        FU_Mode_TrackFace
-    };
+public enum FU_RUNNING_MODE
+{
+    FU_RUNNING_MODE_UNKNOWN = 0,
+    FU_RUNNING_MODE_RENDERITEMS, //face tracking and render item (beautify is one type of item) ,item means '道具'
+    FU_RUNNING_MODE_BEAUTIFICATION,//non face tracking, beautification only.
+    FU_RUNNING_MODE_TRACK//tracking face only then get face infomation, without render item. it's very fast.
+};
 ```
 
 __参数:__
@@ -611,11 +606,10 @@ __参数:__
 *runningMode*: 运行模式
 
 ```
-- FU_Mode_None：停止渲染
-- FU_Mode_RenderItems：开启人脸跟踪和渲染道具
-- FU_Mode_Beautification：只开启美颜
-- FU_Mode_Masked ：使用fu_SetItemIds设置好Mask后，开启这个模式即可生效
-- FU_Mode_TrackFace：只开启人脸跟踪，速度最快
+- FU_RUNNING_MODE_UNKNOWN：停止渲染
+- FU_RUNNING_MODE_RENDERITEMS：开启人脸跟踪和渲染道具
+- FU_RUNNING_MODE_BEAUTIFICATION：只开启美颜
+- FU_RUNNING_MODE_TRACK：只开启人脸跟踪，速度最快
 ```
 
 __返回值:__
@@ -707,11 +701,37 @@ __备注:__
 这个接口会**立即**生效。
 这个接口的具体调用方法和可获取参数名请参考FaceunityWorker.cs中的相关代码。
 
+---
+
+##### fuGetFaceInfoRotated 函数
+
+获取设置了（fuSetInputCameraTextureMatrix/fuSetInputCameraBufferMatrix）后的人脸跟踪信息。
+
+```c#
+ public static extern int fuGetFaceInfo(int face_id, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr ret, int szret);
+```
+
+__参数:__
+
+*face_id*: 当前第几张人脸
+*name*: 需要获取的参数名字
+*ret*: 用于接收数据的数组的指针
+*szret*: 用于接收数据的数组的长度
+
+__返回值:__
+
+返回 1 代表获取成功，信息通过 ret 返回。返回 0 代表获取失败。
+
+__备注:__
+
+这个接口会**立即**生效。
+这个接口的具体调用方法和可获取参数名请参考FaceunityWorker.cs中的相关代码。
+
 ------
 
 ##### fu_SetTongueTracking 函数
 
- FURuningMode为FU_Mode_RenderItems的时候，加载EnableTongueForUnity.bytes，才能开启舌头跟踪。
+ FURuningMode为FU_Mode_RenderItems的时候，加载aitype.bytes，才能开启舌头跟踪。
  FURuningMode为FU_Mode_TrackFace的时候，调用fu_SetTongueTracking(1)，才能开启舌头跟踪。注意，每次切换到FU_Mode_TrackFace之后都需要设置一次！！！
 
 ```c#
@@ -777,82 +797,6 @@ __参数:__
 __返回值:__
 
 无
-
-__备注:__
-
-这个接口会**立即**生效。
-
-------
-
-##### ~~ClearImages 函数~~
-
-已弃用
-
-重置UnityPlugin的GL渲染环境
-
-```c#
- public static extern void ClearImages();
-```
-
-__参数:__
-
-无
-
-__返回值:__
-
-无
-
-__备注:__
-
-这个接口会**立即**生效。
-
-用这个代替：
-
-```c#
-GL.IssuePluginEvent(fu_GetRenderEventFunc(), (int)Nama_GL_Event_ID.ReleaseGLResources);
-```
-
-------
-
-##### ~~jc_part_inited 函数~~
-已弃用
-
-返回值表示UnityNamaSDK初始化PART1是否成功。这个接口主要用于防止二次初始化UnityNamaSDK，这会导致程序崩溃。
-
-```c#
-public static extern int jc_part_inited();
-```
-
-__参数:__
-
-无
-
-__返回值:__
-
-当返回1表示成功，0表示失败。
-
-__备注:__
-
-这个接口会**立即**生效。
-
-------
-
-##### ~~fu_GetNamaInited 函数~~
-已弃用
-
-返回值表示UnityNamaSDK初始化PART2是否成功。PART1和PART2均成功时，UnityNamaSDK才真正初始化成功。
-
-```c#
-public static extern int fu_GetNamaInited();
-```
-
-__参数:__
-
-无
-
-__返回值:__
-
-当返回1时表示成功，0表示失败。
 
 __备注:__
 
@@ -944,14 +888,14 @@ GL.IssuePluginEvent(fu_GetRenderEventFunc(), (int)Nama_GL_Event_ID.ReleaseGLReso
 当加载完道具后，道具不会立即生效开始渲染，而是要通过这个接口输入要渲染的道具的ItemID来开启对应道具的渲染，如果不输入相应ItemID，对应的道具就不会渲染。
 
 ```c#
-public static extern int fu_SetItemIds(IntPtr idxbuf, int idxbuf_sz, IntPtr mask);
+public static extern int fu_SetItemIds(int[] p_items, int n_items, int[] p_masks);
 ```
 
 __参数:__
 
-*idxbuf*:  所有需要渲染的道具的ItemID组成的数组
-*idxbuf_sz*:  数组的长度
-*mask*:  多人脸多道具时每个人脸用不同的道具
+*p_items*:  所有需要渲染的道具的ItemID组成的数组
+*n_items*:  数组的长度
+*p_masks*:  多人脸多道具时每个人脸用不同的道具，可以为空，但是不为空时要和p_items等长！
 
 __返回值:__
 
@@ -960,6 +904,76 @@ __返回值:__
 __备注:__
 
 这个接口会**延迟**生效。
+
+---
+
+##### fuBindItems 函数
+
+将某几个道具绑定到另一个道具上
+
+```c#
+public static extern int fuBindItems(int itemid, int[] p_items, int n_items);
+```
+
+__参数:__
+
+*itemid*: 目标道具的ID
+*p_items*: 需要绑定的道具ID集合数组
+*n_items*:数组长度
+
+__返回值:__
+
+当返回1时表示成功，0表示失败。
+
+__备注:__
+
+这个接口会**立即**生效。
+
+---
+
+##### fuUnbindItems 函数
+
+从某个道具上解绑一些道具
+
+```c#
+public static extern int fuUnbindItems(int itemid, int[] p_items, int n_items);
+```
+
+__参数:__
+
+*itemid*: 目标道具的ID
+*p_items*: 需要解绑的道具ID集合数组
+*n_items*:数组长度
+
+__返回值:__
+
+当返回1时表示成功，0表示失败。
+
+__备注:__
+
+这个接口会**立即**生效。
+
+---
+
+##### fuUnbindItems 函数
+
+从某个道具上解绑所有道具
+
+```c#
+public static extern int fuUnbindAllItems(int itemid);
+```
+
+__参数:__
+
+*itemid*: 目标道具的ID
+
+__返回值:__
+
+当返回1时表示成功，0表示失败。
+
+__备注:__
+
+这个接口会**立即**生效。
 
 ------
 
@@ -1017,56 +1031,6 @@ __备注:__
 
 ```c#
 public static extern int fuItemSetParamdv(int itemid, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr value, int value_sz);
-```
-
-__参数:__
-
-*itemid*: 需要设置参数的道具ID
-*name*: 参数的名字
-*value*: 参数指针
-*value_sz*: 参数长度
-
-__返回值:__
-
-当返回1时表示成功，0表示失败。
-
-__备注:__
-
-这个接口会**立即**生效。
-
-------
-
-##### fuItemSetParamu8v 函数
-
-给道具设置参数（u8数组）
-
-```c#
-public static extern int fuItemSetParamu8v(int itemid, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr value, int value_sz);
-```
-
-__参数:__
-
-*itemid*: 需要设置参数的道具ID
-*name*: 参数的名字
-*value*: 参数指针
-*value_sz*: 参数长度
-
-__返回值:__
-
-当返回1时表示成功，0表示失败。
-
-__备注:__
-
-这个接口会**立即**生效。
-
-------
-
-##### fuItemSetParamu64 函数
-
-给道具设置参数（u64数组）
-
-```c#
-public static extern int fuItemSetParamu64(int itemid, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr value, int value_sz);
 ```
 
 __参数:__
@@ -1157,56 +1121,6 @@ __备注:__
 
 这个接口会**立即**生效。
 
-------
-
-##### fuItemGetParamu8v 函数
-
-获取指定道具的某个参数（u8数组）
-
-```c#
-public static extern int fuItemGetParamu8v(int itemid, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr value, int value_sz);
-```
-
-__参数:__
-
-*itemid*: 需要获取参数的道具ID
-*name*: 参数的名字
-*buf*: 参数指针
-*buf_sz*: 参数的长度
-
-__返回值:__
-
-当返回1时表示成功，0表示失败。
-
-__备注:__
-
-这个接口会**立即**生效。
-
-------
-
-##### fuItemGetParamfv 函数
-
-获取指定道具的某个参数（float数组）
-
-```c#
-public static extern int fuItemGetParamfv(int itemid, [MarshalAs(UnmanagedType.LPStr)]string name, IntPtr value, int value_sz);
-```
-
-__参数:__
-
-*itemid*: 需要获取参数的道具ID
-*name*: 参数的名字
-*buf*: 参数指针
-*buf_sz*: 参数的长度
-
-__返回值:__
-
-当返回1时表示成功，0表示失败。
-
-__备注:__
-
-这个接口会**立即**生效。
-
 ---
 
 ##### fuCreateTexForItem 函数
@@ -1258,8 +1172,6 @@ __备注:__
 
 ------
 
-
-
 #### 2.4 功能接口
 
 ##### fuGetModuleCode 函数
@@ -1289,12 +1201,20 @@ __备注:__
 设置默认的RotationMode，即默认的渲染方向
 
 ```c#
-public static extern void fuSetDefaultRotationMode(int i);
+public static extern void fuSetDefaultRotationMode(FU_ROTATION_MODE rotate_mode);
+
+public enum FU_ROTATION_MODE
+{
+    ROT_0 = 0,
+    ROT_90 = 1,
+    ROT_180 = 2,
+    ROT_270 = 3,
+}
 ```
 
 __参数:__
 
-*i*:  输入0~3的整数，具体应用请参考FixRotation函数
+*rotate_mode*:  默认的渲染方向，相对于输入数据方向
 
 __返回值:__
 
@@ -1311,7 +1231,7 @@ __备注:__
 获取默认的RotationMode，即默认的渲染方向
 
 ```c#
-public static extern int fuGetCurrentRotationMode();
+public static extern FU_ROTATION_MODE fuGetCurrentRotationMode();
 ```
 
 __参数:__
@@ -1397,7 +1317,9 @@ __备注:__
 
 ---
 
-##### SetFlipTexMarkX 函数
+##### ~~SetFlipTexMarkX 函数~~
+
+已弃用
 
 翻转输入的纹理，仅在使用SetDualInput时生效，有些安卓平台nv21buf和tex的方向不一致，可以用这个接口设置tex的X轴镜像。
 
@@ -1419,7 +1341,9 @@ __备注:__
 
 ------
 
-##### SetFlipTexMarkY 函数
+##### ~~SetFlipTexMarkY 函数~~
+
+已弃用
 
 翻转输入的纹理，仅在使用SetDualInput时生效，有些安卓平台nv21buf和tex的方向不一致，可以用这个接口设置tex的Y轴镜像。
 
@@ -1452,6 +1376,28 @@ __备注:__
 __参数:__
 
 *ifpause*: 0代表不暂停，1代表暂停
+
+__返回值:__
+
+无
+
+__备注:__
+
+这个接口会**立即**生效。
+
+---
+
+##### EnableBufferTest 函数
+
+会在输入的buffer的X轴起点和Y轴起点附近画一个红色的框，用于测试buffer方向，只在输入RGBA buffer的时候生效
+
+```c#
+ public static extern void EnableBufferTest(bool t);
+```
+
+__参数:__
+
+t: true为开启，false为关闭，默认为false
 
 __返回值:__
 
@@ -1531,7 +1477,7 @@ __备注:__
 
 ##### fu_EnableLog 函数
 
-开启UnityPlugin层的Log。PC平台需要自行开启Unity控制台（fu_EnableLogConsole），或者配合RegisterDebugCallback开启Unity内Log。
+开启UnityPlugin层的Log。Windows环境需要自行开启Unity控制台（fu_EnableLogConsole），或者配合RegisterDebugCallback开启Unity内Log。
 
 ```c#
  public static extern void fu_EnableLog(bool isenable);
@@ -1549,13 +1495,55 @@ __备注:__
 
 这个接口会**立即**生效。
 
+---
+
+##### fu_RegisterDebugCallback 函数
+
+配合fu_EnableLog使用，注册一个C#委托用于处理返回的Log信息，一般就直接使用Debug.Log打在UnityConsole里。
+
+```c#
+ private static extern void fu_RegisterDebugCallback(DebugCallback callback);
+```
+
+__参数:__
+
+*callback*: 回调委托
+
+__返回值:__
+
+无
+
+__备注:__
+
+这个接口会**立即**生效。
+
+---
+
+##### fu_EnableLogConsole 函数
+
+开启控制台，**仅Windows环境下有效**，可以用来看NAMA SDK输出的log（不包括使用fu_EnableLog 函数开启的UnityPlugin层的Log），同时使用fuSetLogLevel 控制日志等级
+
+```C
+public static extern void fu_EnableLogConsole(bool isenable);
+```
+
+__参数:__  
+
+*isenable [in]*：true为开启，false为关闭
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+请在初始化（fu_Setup）之前开启
+
 ------
 
 ##### fuSetLogLevel 函数
 
-使用fu_EnableLogConsole开启控制台，再使用本接口设置日志等级
+Windows环境需要使用fu_EnableLogConsole开启控制台，或者使用fuOpenFileLog开启log写入文件，再使用本接口设置日志等级。
 
-设置当前日志级别，默认INFO级别。设置FU_LOG_LEVEL_OFF时关闭全部日志，设置日志时大于等于当前级别的日志才能正常输出。PC平台需要自行开启Unity控制台。
+设置当前日志级别，默认INFO级别。设置FU_LOG_LEVEL_OFF时关闭全部日志，设置日志时大于等于当前级别的日志才能正常输出。
 
 ```c#
 public static extern int fuSetLogLevel(FULOGLEVEL level);
@@ -1631,28 +1619,6 @@ __返回值:__
 __备注:__ 
 
 这个接口会**立即**生效。 
-
----
-
-##### fu_RegisterDebugCallback 函数
-
-配合fu_EnableLog使用，注册一个C#委托用于处理返回的Log信息，一般就直接使用Debug.Log打在UnityConsole里。
-
-```c#
- private static extern void fu_RegisterDebugCallback(DebugCallback callback);
-```
-
-__参数:__
-
-*callback*: 回调委托
-
-__返回值:__
-
-无
-
-__备注:__
-
-这个接口会**立即**生效。
 
 ---
 
@@ -1842,68 +1808,225 @@ __备注:__
 
 这个接口会**立即**生效。
 
-------
+---
 
-##### fuSetOutputResolution 函数
-
-设置输出纹理的分辨率
-
+##### fuSetInputCameraTextureMatrix  函数
+调整输入的纹理的旋转方向和镜像
 ```c#
-public static extern void fuSetOutputResolution(int w, int h);
+    /**
+     \brief input description for fuRender api, use to transform the input gpu
+     texture to portrait mode(head-up). then the final output will be portrait mode.
+     the outter user present render pass should use identity matrix to present the
+     result.
+     \param tex_trans_mat, the transform matrix use to transform the input
+     texture to portrait mode.
+     \note when your input is cpu buffer only don't use
+     this api, fuSetInputCameraBufferMatrix will handle all case.
+     */
+private static extern void fuSetInputCameraTextureMatrix(TRANSFORM_MATRIX tex_trans_mat);
+
+public enum TRANSFORM_MATRIX
+{
+    /*
+         * 8 base orientation cases, first do counter-clockwise rotation in degree,
+         * then do flip
+         */
+    DEFAULT = 0,             // no rotation, no flip
+    CCROT0 = DEFAULT,        // no rotation, no flip
+    CCROT90,                 // counter-clockwise rotate 90 degree
+    CCROT180,                // counter-clockwise rotate 180 degree
+    CCROT270,                // counter-clockwise rotate 270 degree
+    CCROT0_FLIPVERTICAL,     // vertical flip
+    CCROT0_FLIPHORIZONTAL,   // horizontal flip
+    CCROT90_FLIPVERTICAL,    // first counter-clockwise rotate 90 degree，then
+    // vertical flip
+    CCROT90_FLIPHORIZONTAL,  // first counter-clockwise rotate 90 degree，then
+    // horizontal flip
+    /*
+                                  * enums below is alias to above enums, there are only 8 orientation cases
+                                  */
+    CCROT0_FLIPVERTICAL_FLIPHORIZONTAL = CCROT180,
+    CCROT90_FLIPVERTICAL_FLIPHORIZONTAL = CCROT270,
+    CCROT180_FLIPVERTICAL = CCROT0_FLIPHORIZONTAL,
+    CCROT180_FLIPHORIZONTAL = CCROT0_FLIPVERTICAL,
+    CCROT180_FLIPVERTICAL_FLIPHORIZONTAL = DEFAULT,
+    CCROT270_FLIPVERTICAL = CCROT90_FLIPHORIZONTAL,
+    CCROT270_FLIPHORIZONTAL = CCROT90_FLIPVERTICAL,
+    CCROT270_FLIPVERTICAL_FLIPHORIZONTAL = CCROT90,
+}
 ```
+__参数:__  
 
-__参数:__
+*tex_trans_mat*：旋转镜像参数
 
-*w*：宽
-
-*h*：高
-
-__返回值:__
-
-无
-
-__备注:__
+__备注:__  
 
 这个接口会**立即**生效。
 
 ---
 
-##### fuFaceProcessorSetMinFaceRatio  函数
-设置人脸检测距离的接口
-```C
+##### fuSetInputCameraTextureMatrixState  函数
+
+开启或关闭纹理旋转镜像调整
+
+```c#
+    /**
+     \brief set input camera texture transform matrix state, turn on or turn off
+     */
+private static extern void fuSetInputCameraTextureMatrixState(bool isEnable);
+```
+
+__参数:__  
+
+*isEnable*：true为开启，false为关闭
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetInputCameraBufferMatrix  函数
+
+调整输入的Buffer的旋转方向和镜像
+
+```c#
+    /**
+     \brief input description for fuRender api, use to transform the input cpu
+     buffer to portrait mode(head-up). then the final output will be portrait mode. 
+     the outter user present render pass should use identity matrix to present the
+     result.
+     \param buf_trans_mat, the transform matrix use to transform the input
+     cpu buffer to portrait mode.
+     \note when your input is gpu texture only don't
+     use this api, fuSetInputCameraTextureMatrix will handle all case.
+     */
+    private static extern void fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX buf_trans_mat);
+```
+
+__参数:__  
+
+*tex_trans_mat*：旋转镜像参数
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetInputCameraBufferMatrixState  函数
+
+开启或关闭Buffer旋转镜像调整
+
+```c#
+    /**
+     \brief set input camera texture transform matrix state, turn on or turn off
+     */
+private static extern void fuSetInputCameraBufferMatrixState(bool isEnable);
+```
+
+__参数:__  
+
+*isEnable*：true为开启，false为关闭
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetOutputMatrix  函数
+
+调整输出的纹理的旋转方向和镜像
+
+```c#
 /**
- \brief set ai model HumanProcessor's minium track face size.
- \param ratio, ratio with min(w,h)，range (0.0,1.0].
+     \brief add optional transform for final result, when use
+     fuSetInputCameraTextureMatrix/fuSetInputCameraBufferMatrix, we means the output
+     is in portrait mode(head-up), and the outter user present render pass should
+     use identity matrix to present the result. but in some rare case, user would
+     like to use a diffent orientation output. in this case,use
+     fuSetInputCameraTextureMatrix/fuSetInputCameraBufferMatrix(portrait mode), then
+     use the additional fuSetOutputMatrix to transform the final result to perfer
+     orientation.
+     \note Don't use this api unless you have to!
+     */
+private static extern void fuSetOutputMatrix(TRANSFORM_MATRIX out_trans_mat);
+```
+
+__参数:__  
+
+*out_trans_mat*：旋转镜像参数
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetOutputMatrixState  函数
+
+开启或关闭输出纹理旋转镜像调整
+
+```c#
+    /**
+     \brief set input camera texture transform matrix state, turn on or turn off
+     */
+private static extern void fuSetOutputMatrixState(bool isEnable);
+```
+
+__参数:__  
+
+*isEnable*：true为开启，false为关闭
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetRttCacheState  函数
+
+开启或关闭RTT缓存
+
+```c#
+/**
+     \brief set internal render target cache state, it is turn off by default.
+     */
+public static extern void fuSetRttCacheState(bool isEnable);
+```
+
+__参数:__  
+
+*isEnable*：true为开启，false为关闭
+
+__备注:__  
+
+这个接口会**立即**生效。
+
+---
+
+##### fuSetFaceProcessorDetectMode  函数
+
+设置人脸检测模式
+
+```c#
+/**
+ \brief set faceprocessor's face detect mode. when use 1 for video mode, face
+ detect strategy is opimized for no face scenario. In image process scenario,
+ you should set detect mode into 0 image mode.
+ \param mode, 0 for image, 1 for video, 1 by default
  */
-public static extern void fuFaceProcessorSetMinFaceRatio(float ratio);
-```
-__参数:__  
-
-*ratio [in]*：数值范围0.0至1.0，最小人脸的大小和输入图形宽高短边的比值。默认值0.2。
-
-__备注:__  
-
-这个接口会**立即**生效。
-
-------
-
-##### fu_EnableLogConsole 函数
-
-开启控制台，**仅Windows环境下有效**，可以用来看NAMA SDK输出的log（不包括使用fu_EnableLog 函数开启的UnityPlugin层的Log），同时使用fuSetLogLevel 控制日志等级
-
-```C
-public static extern void fu_EnableLogConsole(bool isenable);
+public static extern int fuSetFaceProcessorDetectMode(int mode);
 ```
 
 __参数:__  
 
-*isenable [in]*：true为开启，false为关闭
+*mode*：0为图片，1为视频
 
 __备注:__  
 
 这个接口会**立即**生效。
-
-请在初始化（fu_Setup）之前开启
 
 ------
 
@@ -1957,7 +2080,7 @@ __备注:__
 
 ##### CallPluginAtEndOfFrames 函数
 
-开启这个协程，在每个Unity生命周期的末尾会自动调用UnityNamaSDK来识别人脸并渲染当前图像帧，如果开启相关参数(EnableExpressionLoop)，会同时自动获取识别后的人脸信息。
+开启这个协程，在每个Unity生命周期的末尾会自动调用UnityNamaSDK来识别人脸并渲染当前图像帧，如果开启相关参数(EnableHeadLoop)，会同时自动获取识别后的人脸信息。
 
 ```c#
  private IEnumerator CallPluginAtEndOfFrames()

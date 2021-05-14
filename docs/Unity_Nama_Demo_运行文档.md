@@ -1,11 +1,22 @@
 # Demo运行说明文档-Unity 
 级别：Public
-更新日期：2020-12-29
-SDK版本: 7.3.0
+更新日期：2021-04-16
+SDK版本: 7.4.0
 
 ------
 
 ## 最新更新内容：
+
+2021-04-16 v7.4.0:
+
+- 优化2D人体点位和美体性能。  
+- 优化人像分割效果和性能。优化手臂和手识别不稳定问题，优化背景误识别问题。修复人像分割偏移问题。  
+- 优化美妆效果。优化美瞳贴合效果和溢色问题；优化唇妆遮挡效果，遮挡时口红不再显现。  
+- 优化Animoji面部驱动效果。优化小幅度动作，如小幅度张嘴和眨眼时，驱动效果更加灵敏。  
+- 优化情绪识别，支持8种基本情绪识。  
+- 新增接口fuSetUseAsyncAIInference，支持异步模式，开启异步模式，帧率提升，可改善客户在一些低端设备上帧率不足问题。  
+- 新增fuRender接口，为所有业务统一渲染接口，详见接口定义。  
+- 新增接口 fuSetInputCameraBufferMatrix，fuSetInputCameraBufferMatrixState，fuSetInputCameraTextureMatrix，fuSetInputCameraTextureMatrixState，fuSetOutputMatrix，fuSetOutputMatrixState，用于设置图像转换矩阵，用于调整输出图像方向，详见接口定义。 
 
 2020-12-29 v7.3.0:
 
@@ -189,6 +200,8 @@ __注3__: SDK 6.6.0 进行较大的架构调整 , 架构上拆分底层算法能
 
 工程案例更新：
 
+- Nama7.4.0重构了Unity/Nama中间层的代码，部分接口被删除，同时跟踪帧率不再跟随相机帧率，而是Unity渲染帧率，这样可以提高整体流畅度。
+- Nama7.4.0优化了输入输出数据的旋转镜像问题，具体请查看集成指导文档5.2
 - 由于Nama7.0改动巨大，接口变动也较大，但是接口调用方式基本不变，接口变动详见Unity_Nama_API_参考文档
 - 由于Nama 6.6的内部机制更新，AI和渲染分离，现在Nama运行在FU_Mode_RenderItems模式下（渲染Nama道具）时，如果不加载任何道具，Nama也不会运行任何AI逻辑，此时无法进行人脸检测等操作，也无法拿到相关数据！！！因此本工程案例里在DataOut场景和Simple场景中都添加了自动加载一个空道具的逻辑，以应对出现的问题。
 - 当Nama运行在FU_Mode_TrackFace模式下时，无需加载任何道具，会自动跑人脸识别的AI逻辑
@@ -235,7 +248,7 @@ __注3__: SDK 6.6.0 进行较大的架构调整 , 架构上拆分底层算法能
 		 -RenderSimple.cs: 如果你需要输入其他渠道获得的图像数据，请参考这个函数。
 		 -UIManagerSimple.cs: 简单场景的UI控制器，注册了切换相机按钮，管理人脸检测标志。
       +TexOut					//NamaSDK的纹理输出模式，使用NamaSDK进行内容渲染，使用了NatCam以提高效率。直接输出本插件渲染好的数据，可以使用附带的二进制道具文件。
-      	+Resources: 所有道具的二进制文件和对应的UI文件。
+      	+Resources: 一些资源文件。
 	    +Scene: demoTexOut是本例的场景。
 	    +Script: Demo的相关脚本。
 		 -RenderToTexture.cs: 负责对接相机插件，输入输出图像数据，加载卸载道具。
@@ -245,15 +258,20 @@ __注3__: SDK 6.6.0 进行较大的架构调整 , 架构上拆分底层算法能
     +Script					//核心代码文件目录
       -FaceunityWorker.cs：负责初始化NamaSDK并引入C++接口，初始化完成后每帧更新人脸跟踪数据
     +StreamingAssets		//数据文件目录
-      -ai_face_processor.bytes：初始化完成后必须加载的AI数据文件
-      -ai_bgseg.bytes：背景分割AI数据文件
-      -ai_bgseg_green.bytes：带绿幕的背景分割AI数据文件
-      -ai_gesture.bytes：手势跟踪AI数据文件
-      -ai_hairseg.bytes：头发分割AI数据文件
-      -ai_humanpose.bytes：人体姿态跟踪AI数据文件
-      -ai_human_processor.bytes：人体姿态跟踪AI数据文件
-      -tongue.bytes：舌头跟踪AI数据文件
-      -EmptyItem.bytes：空道具，FU_Mode_RenderItems模式下，如果不想加载其他道具，则加载这个，以获取人脸跟踪数据
+      +faceunity
+       +graphics：特殊的道具，如美美颜美妆道具
+       +items：常规道具，如animoji
+       +model：算法数据文件
+        -ai_bgseg.bytes：背景分割AI数据文件
+        -ai_bgseg_green.bytes：带绿幕的背景分割AI数据文件
+        -ai_face_processor.bytes：初始化完成后必须加载的AI数据文件（通用版）
+        -ai_face_processor_pc.bytes：初始化完成后必须加载的AI数据文件（PC/MAC版）
+        -ai_hand_processor.bytes：手势识别AI数据文件（通用版）
+        -ai_hand_processor_pc.bytes：手势识别AI数据文件（PC/MAC版）
+        -ai_human_processor.bytes：人体姿态跟踪AI数据文件（通用版）
+        -ai_human_processor_pc.bytes：人体姿态跟踪AI数据文件（PC/MAC版）
+        -aitype.bytes：用于在FU_Mode_RenderItems模式下，调整AIType
+        -tongue.bytes：舌头跟踪AI数据文件（即将废弃，ai_face_processor内已包含新版舌头跟踪数据）
   +docs					//文档目录
   +ProjectSettings   	//Unity工程配置目录
   -readme.md			//工程总文档

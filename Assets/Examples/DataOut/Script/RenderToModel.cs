@@ -37,7 +37,6 @@ public class RenderToModel : MonoBehaviour
 
     //渲染显示UI
     public RawImage RawImg_BackGroud;   //用来显示相机结果的UI控件
-    private Quaternion baseRotation;    //RawImg_BackGroud的初始旋转
     public Camera camera3d; //渲染3D物体的相机
     public bool ifTrackPos = false;     //是否跟踪人脸位置，选择true时只跟踪人脸旋转
 
@@ -47,19 +46,25 @@ public class RenderToModel : MonoBehaviour
 
     const int SLOTLENGTH = 1;   //这四个参数的作用请看RenderToTexture，主要是为了满足不同SDK模式下的舌头的跟踪，详细信息请看文档
     int[] itemid_tosdk;
-    GCHandle itemid_handle;
-    IntPtr p_itemsid;
+
+    [HideInInspector]
+    public bool isCameraChanging = false;
 
     //相机开始运行的回调
     public void OnStart()
     {
 #if !(UNITY_EDITOR || UNITY_STANDALONE)
-        if (FaceunityWorker.currentMode == FaceunityWorker.FURuningMode.FU_Mode_RenderItems)
+        if (FaceunityWorker.currentMode == FaceunityWorker.FU_RUNNING_MODE.FU_RUNNING_MODE_RENDERITEMS)
         {
             // Set the preview RawImage texture once the preview starts
             if (RawImg_BackGroud != null)
             {
                 RawImg_BackGroud.texture = NatCam.Preview;
+                if (FaceunityWorker.NeedSwitchWidthHeight())
+                {
+                    var tex = ((Texture2D)RawImg_BackGroud.texture);
+                    tex.Resize(tex.height, tex.width);
+                }
                 RawImg_BackGroud.gameObject.SetActive(true);
             }
             else Debug.Log("Preview RawImage has not been set");
@@ -67,32 +72,28 @@ public class RenderToModel : MonoBehaviour
 #else
         m_tex_created = false;
 #endif
-        Debug.Log("Preview started with dimensions: " + NatCam.Camera.PreviewResolution.x+","+ NatCam.Camera.PreviewResolution.y);
-        if(RawImg_BackGroud.texture!=null)
-            Debug.Log("RawImg_BackGroud.TexturePtr= " + RawImg_BackGroud.texture.GetNativeTexturePtr());
 
-        SelfAdjusSize();
-        if(onSwitchCamera!=null)
+        SelfAdjusUISize();
+        if (onSwitchCamera != null)
             onSwitchCamera(false);
+
+        FaceunityWorker.SetCameraChange(true);
     }
 
     //延迟调整相机UI比例旋转，在有些设备上无法第一时间调整
     public IEnumerator delaySet()
     {
-        SelfAdjusSize();
+        SelfAdjusUISize();
         yield return Util._endOfFrame;
         yield return Util._endOfFrame;
         yield return Util._endOfFrame;
-#if !(UNITY_EDITOR || UNITY_STANDALONE)
-        if (RawImg_BackGroud != null)
-        {
-            RawImg_BackGroud.texture = NatCam.Preview;
-            RawImg_BackGroud.gameObject.SetActive(true);
-        }
-        else Debug.Log("Preview RawImage has not been set");
-#else
+#if UNITY_EDITOR || UNITY_STANDALONE
         m_tex_created = false;
 #endif
+        if (RawImg_BackGroud != null)
+        {
+            RawImg_BackGroud.gameObject.SetActive(true);
+        }
     }
 
     //重置相机UI
@@ -101,58 +102,67 @@ public class RenderToModel : MonoBehaviour
         if (RawImg_BackGroud != null)
         {
             RawImg_BackGroud.gameObject.SetActive(false);
-            RawImg_BackGroud.texture = null;
         }
     }
 
     //切换相机
     public void SwitchCamera(int newCamera = -1)
     {
-        FaceunityWorker.fuOnCameraChange();
-
         if (onSwitchCamera != null)
             onSwitchCamera(true);
-        
+
         // Select the new camera ID // If no argument is given, switch to the next camera
         newCamera = newCamera < 0 ? (NatCam.Camera + 1) % DeviceCamera.Cameras.Count : newCamera;
         // Set the new active camera
         NatCam.Camera = (DeviceCamera)newCamera;
 
+        SelfAdjusTexOutPut();
+
         FaceunityWorker.FixRotation(NatCam.Camera.Facing != Facing.Front);
     }
 
-    //根据运行环境调整相机UI的缩放旋转，这段简单的代码无法覆盖所有情况
-    public void SelfAdjusSize()
+    //根据运行环境调整Nama输出纹理的旋转镜像
+    public void SelfAdjusTexOutPut()
     {
-        Vector2 targetResolution = RawImg_BackGroud.canvas.GetComponent<CanvasScaler>().referenceResolution;
-        Vector2 currentResolution = NatCam.Camera.PreviewResolution;
-#if !UNITY_IOS || UNITY_EDITOR || UNITY_STANDALONE
-        if (DispatchUtility.Orientation == Orientation.Rotation_0 || DispatchUtility.Orientation == Orientation.Rotation_180)
-            RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y);
-        else
-            RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y, targetResolution.y * currentResolution.y / currentResolution.x);
-
+#if UNITY_EDITOR || UNITY_STANDALONE
+        /*
+         * CCROT0 = DEFAULT,      
+         * CCROT90,               
+         * CCROT180,              
+         * CCROT270,              
+         * CCROT0_FLIPVERTICAL,   
+         * CCROT0_FLIPHORIZONTAL, 
+         * CCROT90_FLIPVERTICAL,   
+         * CCROT90_FLIPHORIZONTAL,
+         */
+        FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT180);
+#elif UNITY_ANDROID
         if (NatCam.Camera.Facing == Facing.Front)
         {
-            RawImg_BackGroud.rectTransform.rotation = baseRotation * Quaternion.AngleAxis((int)DispatchUtility.Orientation * 90, Vector3.forward);
-#if UNITY_EDITOR || UNITY_STANDALONE
-            RawImg_BackGroud.uvRect = new Rect(1, 0, -1, 1);    //镜像处理
-#else
-		    RawImg_BackGroud.uvRect = new Rect(0, 0, 1, 1);
-#endif
+            FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT90_FLIPHORIZONTAL);
         }
         else
         {
-            RawImg_BackGroud.rectTransform.rotation = baseRotation * Quaternion.AngleAxis((int)DispatchUtility.Orientation * 90, Vector3.back);
-#if UNITY_EDITOR || UNITY_STANDALONE
-            RawImg_BackGroud.uvRect = new Rect(0, 0, 1, 1);
-#else
-		    RawImg_BackGroud.uvRect = new Rect(0, 1, 1, -1);    //镜像处理
-#endif
+            FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT270);
         }
-#else
-		RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.y / currentResolution.x, targetResolution.y);
+#elif UNITY_IOS
+        FaceunityWorker.SetTransformMatrix(FaceunityWorker.TRANSFORM_MATRIX.CCROT180_FLIPHORIZONTAL);
 #endif
+    }
+
+    //根据运行环境调整相机UI的旋转镜像缩放
+    public void SelfAdjusUISize()
+    {
+        Vector2 targetResolution = RawImg_BackGroud.canvas.GetComponent<CanvasScaler>().referenceResolution;
+        Vector2 resolution = NatCam.Camera.PreviewResolution;
+#if UNITY_IOS && !UNITY_EDITOR
+        //ios相机的宽高是反的，为啥？？？
+        resolution = new Vector2(resolution.y, resolution.x);
+#else
+        if (FaceunityWorker.NeedSwitchWidthHeight())
+            resolution = new Vector2(resolution.y, resolution.x);
+#endif
+        RawImg_BackGroud.rectTransform.sizeDelta = new Vector2(targetResolution.y * resolution.x / resolution.y, targetResolution.y);
     }
 
     float currentFov = 0;
@@ -168,7 +178,7 @@ public class RenderToModel : MonoBehaviour
         //Debug.LogFormat("Orientation:{0}", (int)DispatchUtility.Orientation);
         Orientation orientation = DispatchUtility.Orientation;
 
-        if(currentFov!= fov || currentResolution != resolution || currentOrientation != orientation)
+        if (currentFov != fov || currentResolution != resolution || currentOrientation != orientation)
         {
             if ((DispatchUtility.Orientation == Orientation.Rotation_0 || DispatchUtility.Orientation == Orientation.Rotation_180) && resolution.x < resolution.y)
             {
@@ -223,9 +233,8 @@ public class RenderToModel : MonoBehaviour
             NatCam.Play();
             // Register callback for when the preview starts //Note that this is a MUST when assigning the preview texture to anything
             NatCam.OnStart += OnStart;
-            
-            SelfAdjusSize();
-            FaceunityWorker.FixRotation(NatCam.Camera.Facing != Facing.Front);
+
+            SelfAdjusTexOutPut();
 
 #if UNITY_EDITOR || UNITY_STANDALONE
             if (img_handle.IsAllocated)
@@ -244,22 +253,19 @@ public class RenderToModel : MonoBehaviour
         if (itemid_tosdk == null)
         {
             itemid_tosdk = new int[SLOTLENGTH];
-            itemid_handle = GCHandle.Alloc(itemid_tosdk, GCHandleType.Pinned);
-            p_itemsid = itemid_handle.AddrOfPinnedObject();
         }
     }
 
     void InitApplication(object source, EventArgs e)
     {
-        baseRotation = RawImg_BackGroud.rectTransform.rotation;
         StartCoroutine("InitCamera");
-        StartCoroutine(LoadEmptyItem());
+        StartCoroutine(LoadDefaultItem());
     }
 
-    IEnumerator LoadEmptyItem()
+    IEnumerator LoadDefaultItem()
     {
-        yield return LoadItem(Util.GetStreamingAssetsPath() + "/faceunity/EmptyItem.bytes");
-        SetItemParamd(0, "aitype", (double)FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE);
+        yield return LoadItem(Util.GetStreamingAssetsPath() + "/faceunity/graphics/aitype.bytes");
+        SetItemParamd(0, "aitype", (double)(FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE | FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE_TONGUETRACKING));
     }
 
     //当前环境是PC或者MAC的时候，在这里向SDK输入数据并获取SDK输出的纹理
@@ -290,7 +296,7 @@ public class RenderToModel : MonoBehaviour
             }
         }
 
-        if (m_tex_created == false && FaceunityWorker.currentMode == FaceunityWorker.FURuningMode.FU_Mode_RenderItems)
+        if (m_tex_created == false && FaceunityWorker.currentMode == FaceunityWorker.FU_RUNNING_MODE.FU_RUNNING_MODE_RENDERITEMS)
         {
             m_fu_texid = FaceunityWorker.fu_GetNamaTextureId();
             if (m_fu_texid > 0)
@@ -306,7 +312,7 @@ public class RenderToModel : MonoBehaviour
                 }
             }
             //else
-                //Debug.Log("ERROR!!!m_fu_texid: " + m_fu_texid);
+            //Debug.Log("ERROR!!!m_fu_texid: " + m_fu_texid);
         }
 #endif
 
@@ -332,30 +338,26 @@ public class RenderToModel : MonoBehaviour
     //加载道具。RenderItem下的获取跟踪数据，详见文档
     public IEnumerator LoadItem(string path, int slotid = 0)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             yield break;
         Debug.Log("LoadItem:" + path);
         WWW bundledata = new WWW(path);
         yield return bundledata;
         byte[] bundle_bytes = bundledata.bytes;
-        GCHandle hObject = GCHandle.Alloc(bundle_bytes, GCHandleType.Pinned);
-        IntPtr pObject = hObject.AddrOfPinnedObject();
-
-        int itemid = FaceunityWorker.fuCreateItemFromPackage(pObject, bundle_bytes.Length);
-        hObject.Free();
+        int itemid = FaceunityWorker.fuCreateItemFromPackage(bundle_bytes, bundle_bytes.Length);
 
         if (itemid_tosdk[slotid] > 0)
             UnLoadItem(slotid);
 
         itemid_tosdk[slotid] = itemid;
 
-        FaceunityWorker.fu_SetItemIds(p_itemsid, SLOTLENGTH, IntPtr.Zero);
+        FaceunityWorker.fu_SetItemIds(itemid_tosdk, SLOTLENGTH, null);
     }
 
     //加载道具。RenderItem下的获取跟踪数据，详见文档
     public bool UnLoadItem(int slotid = 0)
     {
-        if (!FaceunityWorker.instance.m_plugin_inited)
+        if (FaceunityWorker.fuIsLibraryInit() == 0)
             return false;
         if (slotid >= 0 && slotid < SLOTLENGTH)
         {

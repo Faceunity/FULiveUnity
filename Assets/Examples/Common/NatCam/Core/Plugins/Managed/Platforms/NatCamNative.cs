@@ -47,10 +47,6 @@ namespace NatCamU.Core.Platforms {
         [DllImport(CoreAssembly)]
         public static extern void SetOrientation (byte orientation);
         [DllImport(CoreAssembly)]
-        public static extern void SetFlipx (bool ifenable);
-        [DllImport(CoreAssembly)]
-        public static extern void SetFlipy (bool ifenable);
-        [DllImport(CoreAssembly)]
         public static extern int GetCameraDeviceCount ();
         #endregion
 
@@ -73,8 +69,6 @@ namespace NatCamU.Core.Platforms {
         public static void ReleasePhoto() {}
         public static byte GetOrientation () {return 0;}
         public static void SetOrientation (byte orientation) {}
-        public static void SetFlipx(bool ifenable) {}
-        public static void SetFlipy(bool ifenable) {}
         public static int GetCameraDeviceCount() { return 0; }
         public static void OnPause (bool paused) {}
         public static void SetVerboseMode (bool verbose) {}

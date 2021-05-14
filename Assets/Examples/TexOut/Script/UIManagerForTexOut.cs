@@ -35,8 +35,7 @@ public class UIManagerForTexOut : MonoBehaviour
     public GameObject[] BeautySkinContentPanels;
     public GameObject BeautySkin_UIExample;
     public GameObject BeautyFilter_UIExample;
-
-    public GameObject[] BeautySkin_FaceShape;
+    
     public Slider BeautySkin_Slider;
     public RectTransform BeautyOptionContentTrans;
 
@@ -126,7 +125,7 @@ public class UIManagerForTexOut : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
 
-        //if (FaceunityWorker.instance.m_need_update_facenum > 0)
+        //if (FaceunityWorker.instance.m_need_update_headnum > 0)
         //    Image_FaceDetect.SetActive(false);
         //else
         //    Image_FaceDetect.SetActive(true);
@@ -274,7 +273,7 @@ public class UIManagerForTexOut : MonoBehaviour
             if (currentItemType == ItemType.Beauty)
             {
                 CloseAllBeautySkinContent();
-                BeautySkinContentPanels[3].SetActive(true);
+                BeautySkinContentPanels[2].SetActive(true);
             }
         });
 
@@ -349,7 +348,7 @@ public class UIManagerForTexOut : MonoBehaviour
         var layout = BeautyOptionContentTrans.GetComponent<HorizontalLayoutGroup>();
         layout.padding.left = 20;
         layout.padding.right = 20;
-        BeautySkinContentPanels[3].SetActive(true);
+        BeautySkinContentPanels[2].SetActive(true);
         ClearBeautySkinOptions();
 
         if (type == BeautySkinType.BeautySkin)
@@ -365,7 +364,6 @@ public class UIManagerForTexOut : MonoBehaviour
                     UnSelectAllBeautySkinOptions();
                     go.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(bi.type, bi.iconid_1);
                     go.GetComponentInChildren<Text>().color = highlightColor;
-                    BeautySkinContentPanels[2].SetActive(false);
                     BeautySkinContentPanels[1].SetActive(false);
                 }
                 else
@@ -388,7 +386,6 @@ public class UIManagerForTexOut : MonoBehaviour
                     UnSelectAllBeautySkinOptions();
                     go.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(bi2.type, bi2.iconid_1);
                     go.GetComponentInChildren<Text>().color = highlightColor;
-                    BeautySkinContentPanels[2].SetActive(false);
                     BeautySkin_Slider.onValueChanged.RemoveAllListeners();
                     BeautySkin_Slider.minValue = 0;
                     BeautySkin_Slider.maxValue = bi2.maxvalue;
@@ -455,7 +452,6 @@ public class UIManagerForTexOut : MonoBehaviour
                          UnSelectAllBeautySkinOptions();
                          go.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(bi.type, bi.iconid_1);
                          go.GetComponentInChildren<Text>().color = highlightColor;
-                         BeautySkinContentPanels[2].SetActive(false);
                          BeautySkin_Slider.onValueChanged.RemoveAllListeners();
                          BeautySkin_Slider.minValue = 0;
                          BeautySkin_Slider.maxValue = bi.maxvalue;
@@ -472,28 +468,11 @@ public class UIManagerForTexOut : MonoBehaviour
             }
 
             panel.SetActive(true);
-            BeautySkinContentPanels[4].SetActive(true);
+            BeautySkinContentPanels[3].SetActive(true);
         }
         else if (type == BeautySkinType.BeautyShape)
         {
             BeautySkinSelecterOptions[1].GetComponent<Text>().color = highlightColor;
-
-            GameObject bgo1 = AddBeautySkinOptions(1, BeautyConfig.beautySkin_2[0]);
-            bgo1.GetComponent<AddClickEvent>().AddListener(delegate (GameObject go)
-            {
-                if (currentSelected != go)
-                {
-                    Beauty bi = BeautyConfig.beautySkin_2[0];
-                    currentSelected = go;
-                    UnSelectAllBeautySkinOptions();
-                    go.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(bi.type, bi.iconid_1);
-                    go.GetComponentInChildren<Text>().color = highlightColor;
-                    BeautySkinContentPanels[1].SetActive(false);
-                    BeautySkinContentPanels[2].SetActive(true);
-                }
-            });
-            bgo1.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(BeautyConfig.beautySkin_2[0].type, BeautyConfig.beautySkin_2[0].iconid_1);
-            bgo1.GetComponentInChildren<Text>().color = highlightColor;
 
             for (int i = 1; i < BeautyConfig.beautySkin_2.Length; i++)
             {
@@ -516,7 +495,6 @@ public class UIManagerForTexOut : MonoBehaviour
                         UnSelectAllBeautySkinOptions();
                         go.GetComponentInChildren<Image>().sprite = uisprites.GetSprite(bi.type, bi.iconid_1);
                         go.GetComponentInChildren<Text>().color = highlightColor;
-                        BeautySkinContentPanels[2].SetActive(false);
                         BeautySkin_Slider.onValueChanged.RemoveAllListeners();
                         BeautySkin_Slider.minValue = 0;
                         BeautySkin_Slider.maxValue = bi.maxvalue;
@@ -531,25 +509,11 @@ public class UIManagerForTexOut : MonoBehaviour
                     }
                 });
             }
-
-            for (int i = 0; i < BeautySkin_FaceShape.Length; i++)
-            {
-                BeautySkin_FaceShape[i].GetComponent<AddClickEvent>().AddListener(delegate (GameObject go)
-                {
-                    BeautyConfig.beautySkin_2[0].currentvalue = int.Parse(go.name);
-                    OpenBeautyShapeUI();
-                });
-            }
-            if (BeautyConfig.beautySkin_2[0].currentvalue == -1)
-                BeautyConfig.beautySkin_2[0].currentvalue = 4;
-            else if (BeautyConfig.beautySkin_2[0].currentvalue == -5)
-                BeautyConfig.beautySkin_2[0].currentvalue = 3;
             OpenBeautyShapeUI();
 
             panel.SetActive(true);
             BeautySkinContentPanels[1].SetActive(false);
-            BeautySkinContentPanels[2].SetActive(true);
-            BeautySkinContentPanels[4].SetActive(true);
+            BeautySkinContentPanels[3].SetActive(true);
         }
         else if (type == BeautySkinType.BeautyFilter)
         {
@@ -576,7 +540,7 @@ public class UIManagerForTexOut : MonoBehaviour
             panel.SetActive(true);
             BeautySkinContentPanels[1].SetActive(true);
             BeautySkinContentPanels[2].SetActive(false);
-            BeautySkinContentPanels[4].SetActive(true);
+            BeautySkinContentPanels[3].SetActive(true);
         }
         else if (type == BeautySkinType.MakeupGroup)
         {
@@ -611,8 +575,7 @@ public class UIManagerForTexOut : MonoBehaviour
             }
 
             panel.SetActive(true);
-            BeautySkinContentPanels[2].SetActive(false);
-            BeautySkinContentPanels[4].SetActive(true);
+            BeautySkinContentPanels[3].SetActive(true);
         }
 
         BeautySkinContent.SetActive(true);
@@ -639,45 +602,13 @@ public class UIManagerForTexOut : MonoBehaviour
 
     void OpenBeautyShapeUI()
     {
-        for (int i = 0; i < BeautySkin_FaceShape.Length; i++)
-        {
-            if (i == (int)BeautyConfig.beautySkin_2[0].currentvalue)
-            {
-                BeautySkin_FaceShape[i].GetComponentInChildren<Text>().color = highlightColor;
-                BeautySkin_FaceShape[i].transform.Find("Image_bg").gameObject.SetActive(true);
-            }
-            else
-            {
-                BeautySkin_FaceShape[i].GetComponentInChildren<Text>().color = normalColor;
-                BeautySkin_FaceShape[i].transform.Find("Image_bg").gameObject.SetActive(false);
-            }
-        }
-
         var layout = BeautyOptionContentTrans.GetComponent<HorizontalLayoutGroup>();
-        if (BeautyConfig.beautySkin_2[0].currentvalue == 4)
+        layout.padding.left = 20;
+        layout.padding.right = 20;
+        for (int i = 1; i < BeautyConfig.beautySkin_2.Length; i++)
         {
-            layout.padding.left = 20;
-            layout.padding.right = 20;
-            for (int i = 1; i < BeautyConfig.beautySkin_2.Length; i++)
-            {
-                BeautyGOs[BeautyConfig.beautySkin_2[i]].SetActive(true);
-            }
+            BeautyGOs[BeautyConfig.beautySkin_2[i]].SetActive(true);
         }
-        else
-        {
-            int d = (int)((Canvas_FrontUI.GetComponent<RectTransform>().sizeDelta.x - 540) * 0.5);    //540=150*3+45*2
-            layout.padding.left = d;
-            layout.padding.right = d;
-            for (int i = 1; i < BeautyConfig.beautySkin_2.Length; i++)
-            {
-                if (i == 1 || i == 5)
-                    BeautyGOs[BeautyConfig.beautySkin_2[i]].SetActive(true);
-                else
-                    BeautyGOs[BeautyConfig.beautySkin_2[i]].SetActive(false);
-            }
-        }
-
-        rtt.SetItemParamd(BeautySkinItemName, BeautyConfig.beautySkin_2[0].paramword, BeautyConfig.beautySkin_2[0].currentvalue);
     }
 
     GameObject AddBeautyFilterOptions(Beauty beautyitem)
@@ -995,7 +926,7 @@ public class UIManagerForTexOut : MonoBehaviour
         }
         if (isMusicFilter)
         {
-            var audiodata = Resources.LoadAsync<AudioClip>("items/MusicFilter/douyin");
+            var audiodata = Resources.LoadAsync<AudioClip>("douyin");
             yield return audiodata;
             audios.clip = audiodata.asset as AudioClip;
             audios.loop = true;

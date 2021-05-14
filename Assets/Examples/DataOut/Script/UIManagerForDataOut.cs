@@ -5,7 +5,8 @@ using System;
 using NatCamU.Core;
 using System.Runtime.InteropServices;
 
-public class UIManagerForDataOut : MonoBehaviour {
+public class UIManagerForDataOut : MonoBehaviour
+{
 
     RenderToModel rtm;
 
@@ -24,7 +25,8 @@ public class UIManagerForDataOut : MonoBehaviour {
     }
 
     //默认跟踪人脸位置
-    void Start () {
+    void Start()
+    {
         foreach (StdController stc in stcs)
         {
             stc.gameObject.SetActive(false);
@@ -44,20 +46,22 @@ public class UIManagerForDataOut : MonoBehaviour {
         SetHeadActiveByToggle();
     }
 
-    void Update () {
+    void Update()
+    {
         if (Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
 
-        if (FaceunityWorker.instance.m_need_update_facenum > 0)
+        if (FaceunityWorker.instance.m_need_update_headnum > 0)
             Image_FaceDetect.SetActive(false);
         else
             Image_FaceDetect.SetActive(true);
     }
 
-    
+
     void RegisterUIFunc()
     {
-        Btn_Switch.onClick.AddListener(delegate {
+        Btn_Switch.onClick.AddListener(delegate
+        {
             rtm.SwitchCamera();
         });
 
@@ -67,23 +71,24 @@ public class UIManagerForDataOut : MonoBehaviour {
             if (enableTrack.isOn)
             {
                 rtm.ifTrackPos = true;
-                FaceunityWorker.SetRunningMode(FaceunityWorker.FURuningMode.FU_Mode_RenderItems);
+                FaceunityWorker.SetRunningMode(FaceunityWorker.FU_RUNNING_MODE.FU_RUNNING_MODE_RENDERITEMS);
                 StartCoroutine(rtm.delaySet());
             }
             else
             {
                 rtm.ifTrackPos = false;
-                FaceunityWorker.SetRunningMode(FaceunityWorker.FURuningMode.FU_Mode_TrackFace);
+                FaceunityWorker.SetRunningMode(FaceunityWorker.FU_RUNNING_MODE.FU_RUNNING_MODE_TRACK);
                 FaceunityWorker.fu_SetTongueTracking(1);
                 rtm.ReSetBackGroud();
-                FaceunityWorker.fuSetTrackFaceAIType(FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE);
+                FaceunityWorker.fuSetTrackFaceAIType(FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE | FaceunityWorker.FUAITYPE.FUAITYPE_FACEPROCESSOR_FACECAPTURE_TONGUETRACKING);
             }
         });
 
         for (int i = 0; i < togglefaces.Length; i++)
         {
             int id = i;
-            togglefaces[i].onValueChanged.AddListener(delegate {
+            togglefaces[i].onValueChanged.AddListener(delegate
+            {
                 if (togglefaces[id].isOn)
                 {
                     if (id < stcs.Length)
