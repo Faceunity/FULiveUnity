@@ -1,0 +1,13 @@
+{
+    "name": "Unity.DocZh.EditorTests",
+    "references": [
+        "Unity.DocZh.Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

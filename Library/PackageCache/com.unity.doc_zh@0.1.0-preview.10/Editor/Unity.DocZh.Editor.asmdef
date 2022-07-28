@@ -1,0 +1,10 @@
+{
+    "name": "Unity.DocZh.Editor",
+    "references": [
+      "Unity.UIWidgets"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
