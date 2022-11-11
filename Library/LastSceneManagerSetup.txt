@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Examples/DataOut/Scene/demoDataOut.unity
+- path: Assets/Examples/TexOut/Scene/demoTexOut.unity
   isLoaded: 1
   isActive: 1
