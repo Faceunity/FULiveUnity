@@ -169,6 +169,7 @@ public class CameraManager : UnitySingleton<CameraManager>
                     break;
                 }
             }
+            Debug.Log($"Selected Camera:{devices[cameraIndex].Name}");
             SelectCamera(cameraIndex);
             if (onSelect != null)
                 driver.OnSelect += onSelect;

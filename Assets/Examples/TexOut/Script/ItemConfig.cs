@@ -189,6 +189,10 @@ public class Beauty
     public int iconid_1 = -1;   //选中UI的ID
 
     public BeautySkinType type;
+
+    public bool enable = true;   //功能是否开启，默认开启
+
+    public string tipsStr = string.Empty;    //功能关闭后点击icon的提示信息，默认为空
 };
 
 //这个类关联了一个质感美颜参数（美妆加美颜）
@@ -245,7 +249,7 @@ public class BeautyConfig
         new Beauty { name = "短脸", paramword = "cheek_short", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 8,iconid_1=9 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "小脸", paramword = "cheek_small_mode2", maxvalue=1, defaultvalue=0.0f, disablevalue=0, iconid_0 = 32,iconid_1=33 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "大眼", paramword = "eye_enlarging_mode3", maxvalue=1, defaultvalue=0.4f, disablevalue=0, iconid_0 = 10,iconid_1=11 ,type = BeautySkinType.BeautyShape},//0-1f
-        new Beauty { name = "下巴", paramword = "intensity_chin", maxvalue=1, defaultvalue=0.3f, disablevalue=0.5f, iconid_0 = 12,iconid_1=13 ,type = BeautySkinType.BeautyShape},//0-1f
+        new Beauty { name = "下巴", paramword = "intensity_chin_mode2", maxvalue=1, defaultvalue=0.3f, disablevalue=0.5f, iconid_0 = 12,iconid_1=13 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "额头", paramword = "intensity_forehead_mode2", maxvalue=1, defaultvalue=0.3f, disablevalue=0.5f, iconid_0 = 14,iconid_1=15 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "瘦鼻", paramword = "intensity_nose_mode2", maxvalue=1, defaultvalue=0.5f, disablevalue=0, iconid_0 = 16,iconid_1=17 ,type = BeautySkinType.BeautyShape},//0-1f
         new Beauty { name = "嘴型", paramword = "intensity_mouth_mode3", maxvalue=1, defaultvalue=0.4f, disablevalue=0.5f, iconid_0 = 18,iconid_1=19 ,type = BeautySkinType.BeautyShape},//0-1f

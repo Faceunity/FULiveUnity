@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine.UI;
 using System;
+using System.Collections.Generic;
 
 public class UIManagerForDataOut_Multiple : MonoBehaviour
 {
@@ -36,7 +37,9 @@ public class UIManagerForDataOut_Multiple : MonoBehaviour
     {
         _RegisterUIFunc();
     }
-
+    string tmps = "trueid:";
+    string tmps2 = "indexid:";
+    List<int> face_true_id = new List<int>();
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape)) Application.Quit();
@@ -46,16 +49,16 @@ public class UIManagerForDataOut_Multiple : MonoBehaviour
         {
             _marks[i] = false;
         }
-        string tmps = "trueid:";
-        string tmps2 = "indexid:";
-        var face_true_id = FaceunityWorker.Instance.face_true_id;
+        tmps = "trueid:";
+        tmps2 = "indexid:";
+        face_true_id = FaceunityWorker.Instance.face_true_id;
         for (int i = 0; i < face_true_id.Count; i++)
         {
             int trueid = face_true_id[i];
+            tmps += trueid + ",";
+            tmps2 += i + ",";
             if (trueid < std_controller_array.Length && trueid >= 0)
             {
-                tmps += trueid + ",";
-                tmps2 += i + ",";
                 std_controller_array[trueid].faceid = i;
                 for (int j = 0; j < eye_controller_array[trueid].Length; j++)
                 {
