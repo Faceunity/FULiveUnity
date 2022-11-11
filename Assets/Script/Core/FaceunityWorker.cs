@@ -739,11 +739,12 @@ double array.
         //#if UNITY_EDITOR && !UNITY_IOS
         //            fu_RegisterDebugCallback(new DebugCallback(DebugMethod));
         //#endif
-        fu_EnableLog(false);
+        
 
         fuSetLogLevel(loglevel);
         if (EnableNamaLogToConsole)
         {
+            fu_EnableLog(true);
             fu_EnableLogConsole(true);
         }
         if (EnableNamaLogToFile)
@@ -930,7 +931,10 @@ double array.
         }
     }
 
-    /**\brief SDK渲染的GL循环协程，每一个Unity生命周期的末尾，调用GL.IssuePluginEvent使Unity执行SDK内部的渲染代码，同时获取并保存跟踪信息\return 无    */
+    /**
+\brief SDK渲染的GL循环协程，每一个Unity生命周期的末尾，调用GL.IssuePluginEvent使Unity执行SDK内部的渲染代码，同时获取并保存跟踪信息
+\return 无
+    */
     private IEnumerator CallPluginAtEndOfFrames()
     {
         while (true)
@@ -946,6 +950,9 @@ double array.
                 if (errorcode != 0)
                     Debug.LogErrorFormat("errorcode:{0}, {1}", errorcode, Marshal.PtrToStringAnsi(fuGetSystemErrorString(errorcode)));
             }
+
+            //Avoid getting face_true_id when sdk rendering and causing face flickering
+            yield return Util.end_of_frame;
 
             face_true_id.Clear();
             if (EnableHeadLoop)
@@ -985,7 +992,11 @@ double array.
     }
 
 
-    /**\brief 用来注册SDK的LOG回调，SDK中间层可以用这个来在Unity内部打log\param message 要打的log\return 无    */
+    /**
+\brief 用来注册SDK的LOG回调，SDK中间层可以用这个来在Unity内部打log
+\param message 要打的log
+\return 无
+    */
     private void DebugMethod(string message)
     {
         Debug.Log("From Dll: " + message);
@@ -1093,7 +1104,10 @@ double array.
     }
 
 
-    /**\brief 应用退出是清理相关GCHandle和SDK相关数据\return 无*/
+    /**
+\brief 应用退出是清理相关GCHandle和SDK相关数据
+\return 无
+*/
     private void OnApplicationQuit()
     {
         GL.IssuePluginEvent(fu_GetRenderEventFunc(), (int)Nama_GL_Event_ID.ReleaseGLResources);
@@ -1116,7 +1130,10 @@ double array.
         }
     }
 
-    /**\brief 检测当前渲染环境是否符合要求，本SDK仅支持在OpenGL下运行\return true为检测通过，false为不通过*/
+    /**
+\brief 检测当前渲染环境是否符合要求，本SDK仅支持在OpenGL下运行
+\return true为检测通过，false为不通过
+*/
     bool EnvironmentCheck()
     {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN

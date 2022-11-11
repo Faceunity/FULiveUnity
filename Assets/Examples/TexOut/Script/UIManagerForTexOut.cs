@@ -35,6 +35,7 @@ public class UIManagerForTexOut : MonoBehaviour
     public GameObject[] BeautySkinContentPanels;
     public GameObject BeautySkin_UIExample;
     public GameObject BeautyFilter_UIExample;
+    public Tips tips;    //一些功能点击后的提示UI
     
     public Slider BeautySkin_Slider;
     public RectTransform BeautyOptionContentTrans;
@@ -489,6 +490,13 @@ public class UIManagerForTexOut : MonoBehaviour
                         if (bi == null)
                         {
                             Debug.Log("Undefined BeautyGO!!! name=" + go.name);
+                            return;
+                        }
+                        if(!bi.enable)
+                        {
+                            Debug.Log(bi.tipsStr);
+                            if(tips != null)
+                                tips.ShowAndSetText(bi.tipsStr);
                             return;
                         }
                         currentSelected = go;

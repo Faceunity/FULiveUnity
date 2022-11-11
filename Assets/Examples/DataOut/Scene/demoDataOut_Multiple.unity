@@ -202,6 +202,7 @@ MonoBehaviour:
   camerafov: 0
   rawimg_backgroud: {fileID: 1792170471}
   debugText: {fileID: 2042408049}
+  is_debug_text: 0
   currentMatrix: 0
   camera3d: {fileID: 377382954}
   if_track_pos: 0
