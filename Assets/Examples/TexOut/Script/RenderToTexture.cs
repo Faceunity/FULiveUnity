@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System;
+using UnityEngine.UI;
 public class RenderToTexture : BaseRenerder
 {
     public delegate void LoadItemCallback(Item item);                             //加载道具完毕的委托
@@ -51,14 +52,142 @@ public class RenderToTexture : BaseRenerder
         base.Start();
     }
 
+    public IEnumerator ResetRawImage_Ori()
+    {
+        if (rawimg_ori == null) yield break;
+        rawimg_ori.enabled = false;
+
+        yield return new WaitForSeconds(0.5f);
+        rawimg_ori.enabled = true;
+        rawimg_ori.texture = CameraManager.Instance.GetWebTex();
+        SelfAdjusUISize(rawimg_ori, 1f, CameraManager.Instance.Width, CameraManager.Instance.Height);
+    }
+
     public override void Update()
     {
+        updateOriData();
         base.Update();
+    }
+    //输出的纹理
+    //private Texture2D _m_rendered_tex; //未经SDK处理的纹理
+    private void updateOriData()
+    {
+        if (!rawimg_ori.gameObject.activeSelf) return;
+
+        if(!isInitRawimg_Ori)
+        {
+            SelfAdjusUISize(rawimg_ori, 1f, CameraManager.Instance.Width, CameraManager.Instance.Height);
+            Vector2 targetResolution = rawimg_ori.canvas.GetComponent<CanvasScaler>().referenceResolution;
+            Vector2 currentResolution = new Vector2(CameraManager.Instance.Width, CameraManager.Instance.Height);
+            if (NeedSwitchWidthHeight())
+                rawimg_ori.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.y / currentResolution.x, targetResolution.y);
+            else
+                rawimg_ori.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y);
+            isInitRawimg_Ori = true;
+            rawimg_ori.texture = CameraManager.Instance.GetWebTex();
+        }
+
+    }
+
+    private bool isInitRawimg_Ori = false;
+    public void SelfAdjusUISize(RawImage rawimg, float sizeadjust, int texwidth, int texheight,
+        bool sRGBToLinear = false, bool LinearTosRGB = false, bool adjustflip = true, bool fixedSizeDelta = false)
+    {
+        Vector2 targetResolution = rawimg.canvas.GetComponent<CanvasScaler>().referenceResolution;
+        Vector2 currentResolution = new Vector2(texwidth, texheight);
+        var mat = new Material(rawimg.material);
+        mat.SetFloat("_sRGBToLinear", sRGBToLinear ? 1.0f : 0.0f);
+        mat.SetFloat("_LinearTosRGB", LinearTosRGB ? 1.0f : 0.0f);
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN
+#if UNITY_EDITOR_WIN
+        rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y) * sizeadjust;
+#else
+        rawimg.rectTransform.sizeDelta = new Vector2(3413.333f,1920f) * sizeadjust;
+#endif
+        if (adjustflip)
+        {
+            mat.SetFloat("_SwichXY", 0.0f);   //Rotation processing
+            mat.SetFloat("_FlipX", 1.0f);
+            mat.SetFloat("_FlipY", 0.0f);
+        }
+        FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT180);
+#elif UNITY_STANDALONE_OSX &&!UNITY_EDITOR                                     
+        //rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y) * sizeadjust;
+        rawimg.rectTransform.sizeDelta = new Vector2(3413.333f,1920f) * sizeadjust;
+        if (adjustflip)
+        {
+            mat.SetFloat("_SwichXY", 0.0f);   //Rotation processing
+            mat.SetFloat("_FlipX", 1.0f);
+            mat.SetFloat("_FlipY", 0.0f);
+        }
+        FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT180);
+#elif UNITY_ANDROID              
+        if(fixedSizeDelta)
+            rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y) * sizeadjust;
+        else
+            rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.y / currentResolution.x, targetResolution.y) * sizeadjust;
+            
+        if (adjustflip)
+        {
+            if (CameraManager.Instance.IsFrontFacing)
+            {
+                mat.SetFloat("_SwichXY",1.0f);
+                mat.SetFloat("_FlipX",0.0f);
+                mat.SetFloat("_FlipY",0.0f);
+                FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT90);
+            }
+            else
+            {
+                mat.SetFloat("_SwichXY",1.0f);
+                mat.SetFloat("_FlipX",1.0f);
+                mat.SetFloat("_FlipY",0.0f);
+                FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT270_FLIPHORIZONTAL);
+            }
+        }
+#elif UNITY_IOS          
+        if(fixedSizeDelta)
+            rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.x / currentResolution.y, targetResolution.y) * sizeadjust;
+        else
+            rawimg.rectTransform.sizeDelta = new Vector2(targetResolution.y * currentResolution.y / currentResolution.x, targetResolution.y) * sizeadjust;
+        if (adjustflip)
+        {
+            if (CameraManager.Instance.IsFrontFacing)
+            {
+                mat.SetFloat("_SwichXY",1.0f);
+                mat.SetFloat("_FlipX",1.0f);
+                mat.SetFloat("_FlipY",0.0f);
+                FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT270);
+            }
+            else
+            {
+                mat.SetFloat("_SwichXY",1.0f);
+                mat.SetFloat("_FlipX",1.0f);
+                mat.SetFloat("_FlipY",1.0f);
+                FaceunityWorker.fuSetInputCameraBufferMatrix(TRANSFORM_MATRIX.CCROT90_FLIPVERTICAL);
+            }
+        }
+#endif
+
+        rawimg.material = mat;
     }
 
     public override void OnApplicationPause(bool isPause)
     {
         base.OnApplicationPause(isPause);
+        if (isPause)
+        {
+            rawimg_ori.enabled = false;
+            rawimg_ori.texture = null;
+        }
+        else
+            StartCoroutine(ApplicationPause());
+    }
+
+    IEnumerator ApplicationPause()
+    {
+        yield return new WaitForSeconds(0.5f);
+        rawimg_ori.enabled = true;
+        rawimg_ori.texture = (Texture)CameraManager.Instance.GetWebTex();
     }
 
     public override void OnApplicationQuit()
