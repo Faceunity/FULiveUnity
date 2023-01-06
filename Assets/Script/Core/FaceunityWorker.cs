@@ -480,6 +480,12 @@ double array.
     [DllImport(nama_name, CallingConvention = CallingConvention.Cdecl)]
     private static extern int fuIsTracking();
 
+    [DllImport(nama_name, CallingConvention = CallingConvention.Cdecl)]
+    public static extern FUAIGESTURETYPE fuHandDetectorGetResultNumHands(int index);
+
+    [DllImport(nama_name, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int fuHumanProcessorGetNumResults();
+
     /**
 \brief Set the maximum number of faces we track. The default value is 1.
 \param n is the new maximum number of faces to track

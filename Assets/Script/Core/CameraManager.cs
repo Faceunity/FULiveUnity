@@ -10,7 +10,7 @@ public class CameraManager : UnitySingleton<CameraManager>
 {
     private ICamera driver;
 
-    public bool forceUseLegacyCamera = false;
+    //public bool forceUseLegacyCamera = false;
 
     public int PreferredWidth = 1280;
     public int PreferredHeight = 720;
@@ -88,6 +88,7 @@ public class CameraManager : UnitySingleton<CameraManager>
 
     IEnumerator RequestCameraPermission()
     {
+        cameraPermissionGranted = Application.HasUserAuthorization(UserAuthorization.WebCam);
         if (cameraPermissionGranted)
         {
             yield break;
@@ -118,38 +119,45 @@ public class CameraManager : UnitySingleton<CameraManager>
             yield break;
         }
 
-        bool useNativeCamera = true;
+        //while (!CameraPermissionGranted)
+        //{
+        //    yield return RequestCameraPermission();
+        //    yield return new WaitForSeconds(1);
+        //}
 
-        if (forceUseLegacyCamera)   //强制使用LegacyCamera
-        {
-            useNativeCamera = false;
-            Debug.Log("forceUseLegacyCamera");
-        }
-        else if (Application.platform == RuntimePlatform.Android && Util.GetAndroidAPIVersion() < 24) //NativeCamera不支持Android 7.0以下
-        {
-            useNativeCamera = false;
-            Debug.LogFormat("AndroidAPIVersion is too low:{0}", Util.GetAndroidAPIVersion());
-        }
+        //bool useNativeCamera = true;
+
+        //if (forceUseLegacyCamera)   //强制使用LegacyCamera
+        //{
+        //    useNativeCamera = false;
+        //    Debug.Log("forceUseLegacyCamera");
+        //}
+        //else if (Application.platform == RuntimePlatform.Android && Util.GetAndroidAPIVersion() < 24) //NativeCamera不支持Android 7.0以下
+        //{
+        //    useNativeCamera = false;
+        //    Debug.LogFormat("AndroidAPIVersion is too low:{0}", Util.GetAndroidAPIVersion());
+        //}
 
         CameraDevice[] devices;
-        if (useNativeCamera)
-        {
-            Debug.Log("new NativeCamera");
-            driver = new NativeCamera();
-            devices = driver.EnumerateCamera();
-            if (devices == null || devices.Length <= 0)    //部分手机虽然Android 7.0以上，但是对NativeCamera支持不好
-            {
-                Debug.Log("Rare Case! new LegacyCamera");
-                driver = new LegacyCamera();
-                devices = driver.EnumerateCamera();
-            }
-        }
-        else
-        {
+        //if (useNativeCamera)
+        //{
+        //    Debug.Log("new NativeCamera");
+        //    driver = new NativeCamera();
+        //    devices = driver.EnumerateCamera();
+        //    if (devices == null || devices.Length <= 0)    //部分手机虽然Android 7.0以上，但是对NativeCamera支持不好
+        //    {
+        //        Debug.Log("Rare Case! new LegacyCamera");
+        //        driver = new LegacyCamera();
+        //        devices = driver.EnumerateCamera();
+        //    }
+        //}
+        //else
+        //{
             Debug.Log("new LegacyCamera");
             driver = new LegacyCamera();
+            legacyCamera = (LegacyCamera)driver;
             devices = driver.EnumerateCamera();
-        }
+        //}
 
         string cameraDevicesInfo = "Camera Num: " + devices.Length + ", ";
         foreach (var d in devices)
@@ -184,6 +192,7 @@ public class CameraManager : UnitySingleton<CameraManager>
         else
         {
             Debug.LogError("Can Not Find Camera!");
+            yield return InitCamera(onSelect, onStart, onUpdate,onStop);
         }
     }
 
@@ -211,7 +220,7 @@ public class CameraManager : UnitySingleton<CameraManager>
     {
         if (!IsInitialize) return;
         var cameraIndex = driver.CurrentCameraIndex;
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         cameraIndex = (cameraIndex + 1) % Math.Min(2, driver.CameraCount());          //在某些手机获取超过2个摄像头，第三个后不可用（如华为畅享9s）
 #else
         cameraIndex = (cameraIndex + 1) % driver.CameraCount();
@@ -249,5 +258,13 @@ public class CameraManager : UnitySingleton<CameraManager>
     {
         if (!IsInitialize) return;
         driver.StopCamera();
+    }
+    private LegacyCamera legacyCamera;
+    public WebCamTexture GetWebTex()
+    {
+        if (driver != null && Type == ICameraType.Legacy)
+            return legacyCamera.GetWebTex();
+        else
+            return null;
     }
 }

@@ -35,6 +35,8 @@ public class BaseRenerder : MonoBehaviour
     public RawImage rawimg_backgroud;
     private Vector2 canvasReferenceResolution;
 
+    public RawImage rawimg_ori;
+
     public Text debugText;
     public bool is_debug_text = false;
 
@@ -155,6 +157,7 @@ public class BaseRenerder : MonoBehaviour
 
     public virtual void OnApplicationPause(bool is_paused)
     {
+        Debug.LogWarning($"app 是否切入后台：{is_paused}");
         if (is_paused)
         {
             _m_tex_created = false;
@@ -260,6 +263,14 @@ public class BaseRenerder : MonoBehaviour
         else
             rawimg_backgroud.rectTransform.sizeDelta = new Vector2(canvasReferenceResolution.y * inputTexWidth / inputTexHeight, canvasReferenceResolution.y);
         //Debug.LogFormat("inputTexWidth:{0}, inputTexHeight:{1}, sizeDelta:{2}", inputTexWidth, inputTexHeight, rawimg_backgroud.rectTransform.sizeDelta);
+
+        if(rawimg_ori != null)
+        {
+            if (NeedSwitchWidthHeight())
+                rawimg_ori.rectTransform.sizeDelta = new Vector2(canvasReferenceResolution.y * inputTexHeight / inputTexWidth, canvasReferenceResolution.y);
+            else
+                rawimg_ori.rectTransform.sizeDelta = new Vector2(canvasReferenceResolution.y * inputTexWidth / inputTexHeight, canvasReferenceResolution.y);
+        }
     }
 
 
@@ -409,6 +420,8 @@ public class BaseRenerder : MonoBehaviour
 
     #region Item Related 
 
+    public bool curItemLoaded = false;
+
     /// <summary>
     /// 加载道具
     /// </summary>
@@ -432,6 +445,7 @@ public class BaseRenerder : MonoBehaviour
             slot_items[slot_id].name = item.name;
             slot_items[slot_id].item = item;
             FaceunityWorker.fu_SetItemIds(itemid_tosdk, itemid_tosdk.Length, null);
+            curItemLoaded = true;
         });
     }
     public IEnumerator LoadItem(Item item, string path, int slot_id = 0)
@@ -473,6 +487,7 @@ public class BaseRenerder : MonoBehaviour
             itemid_tosdk[slot_id] = 0;
             slot_items[slot_id].Reset();
             Debug.LogFormat("UnLoadItem slotid = {0}", slot_id);
+            curItemLoaded = false;
             return true;
         }
         Debug.LogError("UnLoadItem Faild!!!");

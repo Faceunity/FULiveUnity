@@ -30,6 +30,11 @@ namespace FaceUnity
                 img_handle.Free();
         }
 
+        public WebCamTexture GetWebTex()
+        {
+            return webCamTexture;
+        }
+
         public override int CameraCount()
         {
             return WebCamTexture.devices.Length;
@@ -98,6 +103,8 @@ namespace FaceUnity
         public override bool UpdateCamera()
         {
             var result = webCamTexture && webCamTexture.isPlaying && webCamTexture.didUpdateThisFrame;
+            if(!result)
+                return false;
             rotation = webCamTexture.videoRotationAngle;
             width = webCamTexture.width;
             height = webCamTexture.height;

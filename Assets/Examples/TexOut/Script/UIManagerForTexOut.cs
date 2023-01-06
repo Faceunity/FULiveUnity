@@ -17,16 +17,22 @@ public class UIManagerForTexOut : MonoBehaviour
     public GameObject RawImage_Pic;
     public Button Btn_Cancel;
     public Button Btn_SavePic;
+    public GameObject RawImage_Background;
+    public GameObject RawImage_Ori;
 
     public GameObject Canvas_TopUI;                                               //主界面UI
-    public Camera Camera_TopUI;
+    public Camera Camera_TopUI; 
+    public GameObject MainItemContent;
+    public GameObject MainItemContent_PC;
     public GameObject[] ItemSelecters;
+
 
     public GameObject Canvas_FrontUI; //前景UI
     public Camera Camera_FrontUI;
     public Button Btn_Switch;
     public Button Btn_Back;
     public GameObject Image_FaceDetect;
+    public GameObject Btn_Compare;
 
     public Button Btn_TakePic_mini_1;   //美颜相关UI
     public GameObject BeautySkinSelecter;
@@ -101,6 +107,14 @@ public class UIManagerForTexOut : MonoBehaviour
         audios = GetComponent<AudioSource>();
         uisprites = GetComponent<Sprites>();
         FaceunityWorker.Instance.OnInitOK += InitApplication;
+
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+        MainItemContent.SetActive(true);
+        MainItemContent_PC.SetActive(false);
+#else
+        MainItemContent.SetActive(false);
+        MainItemContent_PC.SetActive(true);
+#endif
     }
 
     void Start()
@@ -122,6 +136,99 @@ public class UIManagerForTexOut : MonoBehaviour
         //TODO:根据场景处理
         if (Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
+        showNoFaceTip();
+    }
+
+    private string curSelectedModeName = string.Empty;
+    private FUAIGESTURETYPE GestureType = FUAIGESTURETYPE.FUAIGESTURE_UNKNOWN;
+    private int curBodyCount = 0;
+    private int noHandsTimeOut = 0;
+    private int noFaceTimeOut = 0;
+    private int noBodyTimeOut = 0;
+    void showNoFaceTip()
+    {
+        if (BeautySkinContent.activeSelf || Item_Content.activeSelf)
+        {
+            if(curSelectedModeName.CompareTo(ItemType.GestureRecognition.ToString()) == 0)
+            {
+                if (curItemLoaded)
+                {
+                    GestureType = FaceunityWorker.fuHandDetectorGetResultNumHands(0);
+                    if (GestureType == FUAIGESTURETYPE.FUAIGESTURE_NO_HAND || GestureType == FUAIGESTURETYPE.FUAIGESTURE_UNKNOWN)
+                    {
+                        noHandsTimeOut++;
+                        if (noHandsTimeOut <= 5)
+                        {
+                            Image_FaceDetect.SetActive(false);
+                        }
+                        else
+                        {
+                            Image_FaceDetect.SetActive(true);
+                            Image_FaceDetect.GetComponent<Text>().text = "未检测到手势";
+                        }
+                    }
+                    else
+                    {
+                        noHandsTimeOut = 0;
+                        Image_FaceDetect.SetActive(false);
+                    }
+                }
+                else
+                    Image_FaceDetect.SetActive(false);
+            }
+            else if(curSelectedModeName.CompareTo(ItemType.BackgroundSegmentation.ToString()) == 0)
+            {
+                if (curItemLoaded)
+                {
+                    curBodyCount = FaceunityWorker.fuHumanProcessorGetNumResults();
+                    if (curBodyCount <= 0)
+                    {
+                        noBodyTimeOut++;
+                        if (noBodyTimeOut <= 5)
+                        {
+                            Image_FaceDetect.SetActive(false);
+                        }
+                        else
+                        {
+                            Image_FaceDetect.SetActive(true);
+                            Image_FaceDetect.GetComponent<Text>().text = "未检测到人体";
+                        }
+                    }
+                    else
+                    {
+                        noBodyTimeOut = 0;
+                        Image_FaceDetect.SetActive(false);
+                    }
+                }
+                else
+                {
+                    Image_FaceDetect.SetActive(false);
+                }
+            }
+            else
+            {
+                if (FaceunityWorker.Instance.m_need_update_headnum <= 0)
+                {
+                    noFaceTimeOut++;
+                    if (noFaceTimeOut <= 5)
+                    {
+                        Image_FaceDetect.SetActive(false);
+                    }
+                    else
+                    {
+                        Image_FaceDetect.SetActive(true);
+                        Image_FaceDetect.GetComponent<Text>().text = "未检测到人脸";
+                    }
+                }
+                else
+                {
+                    noFaceTimeOut = 0;
+                    Image_FaceDetect.SetActive(false);
+                }
+            }
+        }
+        else
+            Image_FaceDetect.SetActive(false);
     }
 
     //获取License授权信息，这里只是根据SDK用License初始化后的结果，来控制不同类型道具的UI的开启关闭，具体权限分类请咨询技术支持
@@ -133,18 +240,21 @@ public class UIManagerForTexOut : MonoBehaviour
         int code = FaceunityWorker.fuGetModuleCode(0);
         Debug.Log("fu_GetModuleCode:" + code);
         permissions = new bool[permissions_code.Length];
-        for (int i = 0; i < permissions_code.Length; i++)
+        //for (int i = 0; i < permissions_code.Length; i++)
+        for (int i = 0; i < 13; i++)
         {
             if ((code & permissions_code[i]) == permissions_code[i])
             {
                 permissions[i] = true;
                 SetItemTypeEnable(i, true);
+                SetItemTypeEnable(i + 13, true);
             }
             else
             {
                 permissions[i] = false;
                 Debug.Log("权限未获取:" + permissions_code[i]);
                 SetItemTypeEnable(i, false);
+                SetItemTypeEnable(i + 13, false);
             }
         }
         if (permissions[0])
@@ -221,6 +331,7 @@ public class UIManagerForTexOut : MonoBehaviour
         Btn_Switch.onClick.AddListener(delegate
         {
             CameraManager.Instance.SwitchCamera();
+            StartCoroutine(rtt.ResetRawImage_Ori());
         });
         Btn_Back.onClick.AddListener(delegate
         {
@@ -233,23 +344,35 @@ public class UIManagerForTexOut : MonoBehaviour
             Canvas_TopUI.SetActive(true);
             for (int i = 0; i < rtt.slot_items.Length; i++)
             {
-                if (i == (int)SlotForItems.CommonFilter)
+                if (i == (int)SlotForItems.CommonFilter)// || i == (int)SlotForItems.Beauty
                     continue;
                 rtt.UnLoadItem(i);
             }
             CloseBeautySkinUI();
             CloseItemUI();
+            currentSelectedMakeupName = BeautyConfig.makeupGroup_1[0].name;
         });
         Btn_Cancel.onClick.AddListener(OnCancelTakePicture);
         Btn_SavePic.onClick.AddListener(OnSavePicture);
         Btn_TakePic_mini_1.onClick.AddListener(TakePicture);
         Btn_TakePic_mini_2.onClick.AddListener(TakePicture);
+        //Btn_Compare.onClick.AddListener(OnBtnCompareClicked);
+        Btn_Compare.GetComponent<AddClickEvent>().AddPointerDownListener(delegate
+        {
+            OnBtnCompareClicked();
+        });
+
+        Btn_Compare.GetComponent<AddClickEvent>().AddPointerUpListener(delegate
+        {
+            OnBtnCompareClicked();
+        });
 
         for (int i = 0; i < ItemSelecters.Length; i++)
         {
-            if (ItemSelecters[i].activeSelf)
+            if (ItemSelecters[i] != null && ItemSelecters[i].activeSelf)
                 ItemSelecters[i].GetComponent<AddClickEvent>().AddListener(delegate (GameObject go)
                 {
+                    curSelectedModeName = go.name;
                     if (go.name.CompareTo(ItemType.Beauty.ToString()) == 0)
                     {
                         StartCoroutine(OpenBeautySkinUI(BeautySkinType.None));
@@ -262,20 +385,75 @@ public class UIManagerForTexOut : MonoBehaviour
                 });
         }
 
-        rtt.rawimg_backgroud.GetComponent<AddClickEvent>().AddListener(delegate
-        {
-            if (currentItemType == ItemType.Beauty)
+        //rtt.rawimg_backgroud.GetComponent<AddClickEvent>().AddListener(delegate
+        //{
+        //    if (currentItemType == ItemType.Beauty)
+        //    {
+        //        CloseAllBeautySkinContent();
+        //        BeautySkinContentPanels[2].SetActive(true);
+        //    }
+        //});
+
+        BeautySkinSelecterOptions[0].GetComponent<AddClickEvent>().AddListener(delegate { 
+            if(!BeautySkinSelecterOptionsHasClicked || curSelectedBeautySkinSelecterIndex != 0)
+            {
+                StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautySkin));
+                BeautySkinSelecterOptionsHasClicked = true;
+                curSelectedBeautySkinSelecterIndex = 0;
+            }
+            else
             {
                 CloseAllBeautySkinContent();
                 BeautySkinContentPanels[2].SetActive(true);
+                BeautySkinSelecterOptionsHasClicked = false;
             }
         });
-
-        BeautySkinSelecterOptions[0].GetComponent<AddClickEvent>().AddListener(delegate { StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautySkin)); });
-        BeautySkinSelecterOptions[1].GetComponent<AddClickEvent>().AddListener(delegate { StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautyShape)); });
-        BeautySkinSelecterOptions[2].GetComponent<AddClickEvent>().AddListener(delegate { StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautyFilter)); });
-        BeautySkinSelecterOptions[3].GetComponent<AddClickEvent>().AddListener(delegate { StartCoroutine(OpenBeautySkinUI(BeautySkinType.MakeupGroup)); });
+        BeautySkinSelecterOptions[1].GetComponent<AddClickEvent>().AddListener(delegate {
+            if (!BeautySkinSelecterOptionsHasClicked || curSelectedBeautySkinSelecterIndex != 1)
+            {
+                StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautyShape));
+                BeautySkinSelecterOptionsHasClicked = true;
+                curSelectedBeautySkinSelecterIndex = 1;
+            }
+            else
+            {
+                CloseAllBeautySkinContent();
+                BeautySkinContentPanels[2].SetActive(true);
+                BeautySkinSelecterOptionsHasClicked = false;
+            }
+        });
+        BeautySkinSelecterOptions[2].GetComponent<AddClickEvent>().AddListener(delegate {
+            if (!BeautySkinSelecterOptionsHasClicked || curSelectedBeautySkinSelecterIndex != 2)
+            {
+                StartCoroutine(OpenBeautySkinUI(BeautySkinType.BeautyFilter));
+                BeautySkinSelecterOptionsHasClicked = true;
+                curSelectedBeautySkinSelecterIndex = 2;
+            }
+            else
+            {
+                CloseAllBeautySkinContent();
+                BeautySkinContentPanels[2].SetActive(true);
+                BeautySkinSelecterOptionsHasClicked = false;
+            }
+        });
+        BeautySkinSelecterOptions[3].GetComponent<AddClickEvent>().AddListener(delegate {
+            if (!BeautySkinSelecterOptionsHasClicked || curSelectedBeautySkinSelecterIndex != 3)
+            {
+                StartCoroutine(OpenBeautySkinUI(BeautySkinType.MakeupGroup));
+                BeautySkinSelecterOptionsHasClicked = true;
+                curSelectedBeautySkinSelecterIndex = 3;
+            }
+            else
+            {
+                CloseAllBeautySkinContent();
+                BeautySkinContentPanels[2].SetActive(true);
+                BeautySkinSelecterOptionsHasClicked = false;
+            }
+        });
     }
+
+    private bool BeautySkinSelecterOptionsHasClicked = false;
+    private int curSelectedBeautySkinSelecterIndex = 0;
 
     void UnRegisterUIFunc()
     {
@@ -287,7 +465,8 @@ public class UIManagerForTexOut : MonoBehaviour
         Btn_TakePic_mini_2.onClick.RemoveAllListeners();
         for (int i = 0; i < ItemSelecters.Length; i++)
         {
-            ItemSelecters[i].GetComponent<AddClickEvent>().RemoveAllListener();
+            if(ItemSelecters[i] != null)
+                ItemSelecters[i].GetComponent<AddClickEvent>().RemoveAllListener();
         }
 
         rtt.rawimg_backgroud.GetComponent<AddClickEvent>().RemoveAllListener();
@@ -307,8 +486,15 @@ public class UIManagerForTexOut : MonoBehaviour
     void TakePicture()
     {
         RawImage_Pic.GetComponent<RawImage>().texture = Util.CaptureCamera(new Camera[] { Camera_BackUI }, new Rect(0, 0, Screen.width, Screen.height));
-        Canvas_FrontUI.SetActive(false);
-        SwitchPicGos(true);
+        Util.SaveTex2D((Texture2D)RawImage_Pic.GetComponent<RawImage>().texture);
+        //Canvas_FrontUI.SetActive(false);
+        //SwitchPicGos(true);
+        showSaveSuccessTips();
+    }
+
+    private void showSaveSuccessTips()
+    {
+        GameObject tipsGo = GameObject.Instantiate(Resources.Load<GameObject>("Tips"), Canvas_FrontUI.transform);
     }
 
     void OnCancelTakePicture()
@@ -323,7 +509,16 @@ public class UIManagerForTexOut : MonoBehaviour
         OnCancelTakePicture();
     }
 
-    #region BeautySkinUI
+    void OnBtnCompareClicked()
+    {
+        if (CameraManager.Instance.Type == FaceUnity.ICameraType.Native) return;
+
+        if (RawImage_Ori == null || RawImage_Background == null) return;
+        RawImage_Ori.SetActive(!RawImage_Ori.activeSelf);
+        RawImage_Background.SetActive(!RawImage_Background.activeSelf);
+    }
+
+#region BeautySkinUI
 
     IEnumerator OpenBeautySkinUI(BeautySkinType type)
     {
@@ -391,6 +586,8 @@ public class UIManagerForTexOut : MonoBehaviour
                         SwitchBeautyOptionUIState(bi2, go);
                     });
                     BeautySkinContentPanels[1].SetActive(true);
+
+                    BeautySkin_Slider.GetComponent<ISlider>().SetDisableValue(bi2.disablevalue);
                 }
                 else
                 {
@@ -464,10 +661,12 @@ public class UIManagerForTexOut : MonoBehaviour
                                  SwitchBeautyOptionUIState(bi, go);
                              });
                          BeautySkinContentPanels[1].SetActive(true);
+
+                         BeautySkin_Slider.GetComponent<ISlider>().SetDisableValue(bi.disablevalue);
                      }
                  });
             }
-
+            Debug.Log("BeautySkin on clicked");
             panel.SetActive(true);
             BeautySkinContentPanels[3].SetActive(true);
         }
@@ -514,6 +713,8 @@ public class UIManagerForTexOut : MonoBehaviour
                             SwitchBeautyOptionUIState(bi, go);
                         });
                         BeautySkinContentPanels[1].SetActive(true);
+
+                        BeautySkin_Slider.GetComponent<ISlider>().SetDisableValue(bi.disablevalue);
                     }
                 });
             }
@@ -546,9 +747,10 @@ public class UIManagerForTexOut : MonoBehaviour
                 rtt.SetItemParamd(BeautySkinItemName, "filter_level", BeautySkin_Slider.value);
             });
             panel.SetActive(true);
-            BeautySkinContentPanels[1].SetActive(true);
-            BeautySkinContentPanels[2].SetActive(false);
+            BeautySkinContentPanels[1].SetActive(false);
+            //BeautySkinContentPanels[2].SetActive(false);
             BeautySkinContentPanels[3].SetActive(true);
+            BeautySkin_Slider.GetComponent<ISlider>().SetDisableValue(0f);
         }
         else if (type == BeautySkinType.MakeupGroup)
         {
@@ -575,6 +777,7 @@ public class UIManagerForTexOut : MonoBehaviour
                     rtt.SetItemParamd(MakeupItemName, "makeup_intensity", BeautySkin_Slider.value);
                 });
                 BeautySkinContentPanels[1].SetActive(true);
+                BeautySkin_Slider.GetComponent<ISlider>().SetDisableValue(0f);
             }
             else
             {
@@ -646,6 +849,11 @@ public class UIManagerForTexOut : MonoBehaviour
             rtt.SetItemParams(BeautySkinItemName, "filter_name", beautyitem.paramword);
             rtt.SetItemParamd(BeautySkinItemName, "filter_level", beautyitem.defaultvalue);
             BeautySkin_Slider.value = beautyitem.defaultvalue;
+
+            if (beautyitem.paramword.CompareTo("origin") == 0)
+                BeautySkinContentPanels[1].gameObject.SetActive(false);
+            else
+                BeautySkinContentPanels[1].gameObject.SetActive(true);
         });
         return option;
     }
@@ -776,9 +984,9 @@ public class UIManagerForTexOut : MonoBehaviour
         BeautySkinContent.SetActive(false);
         BeautySkinSelecter.SetActive(false);
     }
-    #endregion
+#endregion
 
-    #region ItemsUI
+#region ItemsUI
 
     void OpenItemsUI(string it)
     {
@@ -849,10 +1057,9 @@ public class UIManagerForTexOut : MonoBehaviour
             default:
                 break;
         }
-
         Item_Content.SetActive(true);
     }
-
+    private bool curItemLoaded = false;
     void AddItemOptions(Item[] items)
     {
         GameObject disableoption = Instantiate(Item_Disable);
@@ -877,6 +1084,8 @@ public class UIManagerForTexOut : MonoBehaviour
                 }
                 rtt.UnLoadItem((int)SlotForItems.Item);
                 Item_Tip.text = "";
+                StartCoroutine(rtt.LoadItem(ItemConfig.beautySkin[0], (int)SlotForItems.Beauty));
+                curItemLoaded = false;
             }
         });
 
@@ -916,6 +1125,7 @@ public class UIManagerForTexOut : MonoBehaviour
                     audios.Stop();
                 }
                 StartCoroutine(rtt.LoadItem(item, (int)SlotForItems.Item, new RenderToTexture.LoadItemCallback(OnItemLoaded)));
+                curItemLoaded = true;
             }
         });
         return option;
@@ -972,13 +1182,14 @@ public class UIManagerForTexOut : MonoBehaviour
             musiccor = StartCoroutine(PlayMusic(item.name));
         }
         Item_Tip.text = item.tip;
+        StartCoroutine(rtt.LoadItem(ItemConfig.beautySkin[0], (int)SlotForItems.Beauty));
     }
 
     void CloseItemUI()
     {
         Item_Content.SetActive(false);
     }
-    #endregion
+#endregion
 
     void OnApplicationQuit()
     {
