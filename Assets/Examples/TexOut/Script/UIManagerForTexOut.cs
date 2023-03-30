@@ -359,12 +359,12 @@ public class UIManagerForTexOut : MonoBehaviour
         //Btn_Compare.onClick.AddListener(OnBtnCompareClicked);
         Btn_Compare.GetComponent<AddClickEvent>().AddPointerDownListener(delegate
         {
-            OnBtnCompareClicked();
+            OnBtnCompareClicked(true);
         });
 
         Btn_Compare.GetComponent<AddClickEvent>().AddPointerUpListener(delegate
         {
-            OnBtnCompareClicked();
+            OnBtnCompareClicked(false);
         });
 
         for (int i = 0; i < ItemSelecters.Length; i++)
@@ -509,13 +509,23 @@ public class UIManagerForTexOut : MonoBehaviour
         OnCancelTakePicture();
     }
 
-    void OnBtnCompareClicked()
+    void OnBtnCompareClicked(bool isDown)
     {
         if (CameraManager.Instance.Type == FaceUnity.ICameraType.Native) return;
 
         if (RawImage_Ori == null || RawImage_Background == null) return;
-        RawImage_Ori.SetActive(!RawImage_Ori.activeSelf);
-        RawImage_Background.SetActive(!RawImage_Background.activeSelf);
+        //if(RawImage_Ori.gameObject.activeSelf)
+        //    RawImage_Ori.gameObject.SetActive(false);
+        //else
+        //    RawImage_Ori.gameObject.SetActive(true);
+
+        //if (RawImage_Background.gameObject.activeSelf)
+        //    RawImage_Background.gameObject.SetActive(false);
+        //else
+        //    RawImage_Background.gameObject.SetActive(true);
+
+        RawImage_Ori.gameObject.SetActive(isDown);
+        RawImage_Background.gameObject.SetActive(!isDown);
     }
 
 #region BeautySkinUI
